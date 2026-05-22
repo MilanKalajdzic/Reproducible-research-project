@@ -18,6 +18,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+    && curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb \
+    && dpkg -i quarto-linux-amd64.deb \
+    && rm quarto-linux-amd64.deb \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install jupyter
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2: install Python dependencies
 # ─────────────────────────────────────────────────────────────────────────────
@@ -39,6 +48,7 @@ COPY tests/ ./tests/
 COPY notebooks/ ./notebooks/
 COPY reports/ ./reports/
 COPY scripts/ ./scripts/
+COPY docs/ ./docs/
 COPY Makefile ./
 COPY .pre-commit-config.yaml ./
 
