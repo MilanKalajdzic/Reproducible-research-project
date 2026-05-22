@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  etf-predictor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    image: etf-predictor:latest
+    container_name: etf_predictor_dev
+    volumes:
+      # Mount source so edits are reflected without rebuilding
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./notebooks:/app/notebooks
+      - ./reports:/app/reports
+      # Persist raw + processed data between runs
+      - ./data:/app/data
+    environment:
+      - PYTHONPATH=/app/src
+    # Keep container running for interactive use
+    command: tail -f /dev/null
+
+  # Run tests inside the container
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    image: etf-predictor:latest
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./data:/app/data
+    environment:
+      - PYTHONPATH=/app/src
+    command: pytest tests/ -v --cov=etf_predictor
+
+  # Jupyter notebook server
+  notebook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    image: etf-predictor:latest
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./src:/app/src
+      - ./notebooks:/app/notebooks
+      - ./data:/app/data
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app/src
+    command: >
+      jupyter notebook
+        --ip=0.0.0.0
+        --port=8888
+        --no-browser
+        --allow-root
+        --NotebookApp.token=''
