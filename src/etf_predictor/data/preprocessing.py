@@ -1,0 +1,248 @@
+"""
+preprocessing.py
+----------------
+Data normalisation and cleaning as described in Sagaceta-Mejía et al.
+(2024), Sections 2.5 and 2.6.
+
+Two classes are provided:
+
+- ``MinMaxScaler``  — per-column min-max normalisation fitted only on
+  training data to prevent target leakage.
+- ``DataCleaner``   — removes rows containing NaN values that arise
+  from the warm-up period of technical indicators (e.g. SMA requires
+  ``n`` prior rows before it can be computed).
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Optional
+
+import numpy as np
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+
+class MinMaxScaler:
+    """Per-column min-max normalisation to the [0, 1] range.
+
+    Implements the formula from the paper (Section 2.5)::
+
+        scaled = (value[i] - min) / (max - min)
+
+    The scaler is **fit on training data only** and then applied to
+    both train and test splits, preventing data leakage — a point the
+    paper does not make explicit but is critical in practice.
+
+    Parameters
+    ----------
+    feature_range : tuple[float, float]
+        Target range after scaling. Defaults to ``(0.0, 1.0)``.
+    exclude_cols : list[str] or None
+        Columns to leave unscaled (e.g. the target column ``"Gamma"``).
+
+    Examples
+    --------
+    >>> scaler = MinMaxScaler(exclude_cols=["Gamma"])
+    >>> scaler.fit(X_train)
+    >>> X_train_scaled = scaler.transform(X_train)
+    >>> X_test_scaled  = scaler.transform(X_test)
+    """
+
+    def __init__(
+        self,
+        feature_range: tuple[float, float] = (0.0, 1.0),
+        exclude_cols: Optional[list[str]] = None,
+    ) -> None:
+        self.feature_range = feature_range
+        self.exclude_cols = set(exclude_cols or [])
+        self._min: Optional[pd.Series] = None
+        self._max: Optional[pd.Series] = None
+        self._fitted = False
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def fit(self, df: pd.DataFrame) -> "MinMaxScaler":
+        """Compute per-column min and max from *df*.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Training split (features only — should not include the
+            target column, or pass it in ``exclude_cols``).
+
+        Returns
+        -------
+        MinMaxScaler
+            Returns ``self`` for method chaining.
+        """
+        cols = self._feature_cols(df)
+        self._min = df[cols].min()
+        self._max = df[cols].max()
+        self._fitted = True
+        logger.info("MinMaxScaler fitted on %d columns.", len(cols))
+        return self
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Apply min-max scaling to *df* using fitted statistics.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame to scale. May contain extra columns that will be
+            left untouched (e.g. the target column).
+
+        Returns
+        -------
+        pd.DataFrame
+            Scaled DataFrame with the same index and columns.
+
+        Raises
+        ------
+        RuntimeError
+            If ``fit()`` has not been called yet.
+        """
+        if not self._fitted:
+            raise RuntimeError("Call fit() before transform().")
+
+        result = df.copy()
+        cols = [c for c in self._feature_cols(df) if c in self._min.index]
+
+        lo, hi = self.feature_range
+        denom = self._max[cols] - self._min[cols]
+        # Avoid division by zero for constant columns
+        denom = denom.replace(0, np.nan)
+
+        result[cols] = (
+            (result[cols] - self._min[cols]) / denom * (hi - lo) + lo
+        )
+        return result
+
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Convenience wrapper: fit then transform in one step.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Training data.
+
+        Returns
+        -------
+        pd.DataFrame
+            Scaled training data.
+        """
+        return self.fit(df).transform(df)
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _feature_cols(self, df: pd.DataFrame) -> list[str]:
+        """Return columns that should be scaled."""
+        return [c for c in df.columns if c not in self.exclude_cols]
+
+
+class DataCleaner:
+    """Remove rows with NaN values introduced by indicator warm-up.
+
+    Technical indicators such as SMA(200) require 200 prior observations
+    before yielding a value. The first *n* rows of each indicator column
+    will therefore be NaN. This class drops all rows where *any*
+    feature column contains NaN, matching the paper's approach.
+
+    Parameters
+    ----------
+    strategy : {"drop_rows", "fill_forward"}
+        How to handle NaN values.
+
+        - ``"drop_rows"`` (default, matches paper): remove any row
+          containing at least one NaN.
+        - ``"fill_forward"``: forward-fill NaN values then drop
+          remaining NaNs at the start of the series.
+    exclude_cols : list[str] or None
+        Columns to ignore when checking for NaNs (e.g. target column).
+
+    Examples
+    --------
+    >>> cleaner = DataCleaner(strategy="drop_rows")
+    >>> df_clean = cleaner.clean(df_with_indicators)
+    """
+
+    def __init__(
+        self,
+        strategy: str = "drop_rows",
+        exclude_cols: Optional[list[str]] = None,
+    ) -> None:
+        valid = {"drop_rows", "fill_forward"}
+        if strategy not in valid:
+            raise ValueError(
+                f"strategy must be one of {valid}, got '{strategy}'"
+            )
+        self.strategy = strategy
+        self.exclude_cols = set(exclude_cols or [])
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def clean(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Remove or impute NaN rows from *df*.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame after indicator computation.
+
+        Returns
+        -------
+        pd.DataFrame
+            Cleaned DataFrame. The index is reset to a continuous
+            DatetimeIndex.
+        """
+        original_len = len(df)
+        feature_cols = [c for c in df.columns if c not in self.exclude_cols]
+
+        if self.strategy == "fill_forward":
+            result = df.copy()
+            result[feature_cols] = result[feature_cols].ffill()
+            result = result.dropna(subset=feature_cols)
+        else:
+            result = df.dropna(subset=feature_cols)
+
+        removed = original_len - len(result)
+        pct = 100 * removed / original_len if original_len else 0
+        logger.info(
+            "DataCleaner removed %d rows (%.1f%%). Remaining: %d",
+            removed,
+            pct,
+            len(result),
+        )
+        return result.copy()
+
+    def nan_report(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Return a summary of NaN counts per column.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input DataFrame (before cleaning).
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with columns ``["nan_count", "nan_pct"]``,
+            sorted by ``nan_count`` descending, showing only columns
+            that have at least one NaN.
+        """
+        nan_counts = df.isna().sum()
+        nan_counts = nan_counts[nan_counts > 0]
+        report = pd.DataFrame(
+            {
+                "nan_count": nan_counts,
+                "nan_pct": 100 * nan_counts / len(df),
+            }
+        ).sort_values("nan_count", ascending=False)
+        return report
