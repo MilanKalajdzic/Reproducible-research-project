@@ -10,22 +10,28 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 ## Quick Start (Docker — recommended)
 
     # 1. Pull the image from DockerHub
-    docker pull !!!TBD
+    docker pull ##!!!!!TBD!!!!!
 
     # 2. Or build locally
     docker compose build
 
-    # 3. Download data and run the pipeline
-    docker compose run --rm etf-predictor make data
+    # 3. Open a shell inside the container
+    docker compose run --rm etf-predictor bash
 
-    # 4. Generate EDA figures
-    docker compose run --rm etf-predictor make eda
+    # 4. Inside the container — run everything in order:
+    make data       # download and process ETF data
+    make test       # run 25 unit tests
+    make eda        # generate EDA figures to reports/figures/
+    make docs       # build Sphinx HTML docs to docs/_build/html/
 
-    # 5. Build Sphinx documentation
-    docker compose run --rm etf-predictor make docs
+    # 5. Render the Quarto report (inside container)
+    quarto render reports/eda_report.qmd
 
-    # 6. Run tests
-    docker compose run --rm test
+    # 6. Copy rendered report out to your local machine (from PowerShell)
+    docker cp <container_name>:/app/reports/eda_report.html reports/eda_report.html
+
+    # 7. Copy built docs out to your local machine (from PowerShell)
+    docker cp <container_name>:/app/docs/_build/html docs/_build/html
 
 ---
 
@@ -41,6 +47,8 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 Data sourced from Yahoo Finance via yfinance. Raw data is cached as
 parquet files under data/raw/ and is not committed to the repository.
 
+Note: IEUR data starts June 2014 — Yahoo Finance data availability limitation.
+
 ---
 
 ## Data Preparation Pipeline
@@ -55,9 +63,10 @@ parquet files under data/raw/ and is not committed to the repository.
             ↓
     MinMaxScaler           → all features scaled to [0, 1]
             ↓
-    DataCleaner            → sparse columns dropped, NaNs forward-filled
+    DataCleaner            → sparse columns dropped (>95% NaN),
+                             remaining NaNs forward-filled
             ↓
-    data/processed/*.parquet  ← modeling entry point
+    data/processed/*.parquet  ← modeling team entry point
 
 **Processed dataset summary:**
 
@@ -74,23 +83,37 @@ parquet files under data/raw/ and is not committed to the repository.
 
     ├── src/etf_predictor/
     │   └── data/
+    │       ├── __init__.py
     │       ├── loader.py        # YahooFinanceLoader — download + parquet cache
     │       ├── targets.py       # TargetBuilder      — Γ(t) label construction
     │       ├── indicators.py    # TechnicalIndicators — pandas-ta 0.4.x wrapper
     │       ├── preprocessing.py # MinMaxScaler, DataCleaner
     │       ├── pipeline.py      # DataPipeline       — orchestrates all steps
-    │       └── visualization.py # EDAVisualizer      — EDA figures
-    ├── tests/data/              # 25 pytest unit tests
+    │       └── visualization.py # EDAVisualizer      — all EDA figures
+    ├── tests/
+    │   └── data/
+    │       ├── test_loader.py
+    │       ├── test_targets.py
+    │       └── test_preprocessing.py
     ├── reports/
-    │   └── eda_report.qmd       # Quarto report
+    │   └── eda_report.qmd       # Quarto report source — render with quarto render
     ├── scripts/
-    │   └── generate_eda.py      # EDA figure generation script
-    ├── docs/source/             # Sphinx documentation source
-    ├── Dockerfile               # Python 3.12-slim, single image
-    ├── docker-compose.yml       # Services: etf-predictor, test, notebook
-    ├── Makefile                 # Automation targets
-    ├── pyproject.toml           # Dependencies + ruff linting config
-    └── .pre-commit-config.yaml  # ruff linter + formatter hooks
+    │   └── generate_eda.py      # called by make eda
+    ├── docs/
+    │   └── source/              # Sphinx documentation source
+    │       ├── conf.py
+    │       ├── index.rst
+    │       └── modules.rst
+    ├── notebooks/               # exploration notebooks (not for submission)
+    ├── data/
+    │   ├── raw/                 # downloaded parquet files (git-ignored)
+    │   └── processed/           # processed parquet files (git-ignored)
+    ├── Dockerfile               # Python 3.12-slim, single image for all collaborators
+    ├── docker-compose.yml       # services: etf-predictor, test, notebook
+    ├── Makefile                 # automation targets
+    ├── pyproject.toml           # dependencies + ruff linting config
+    ├── .pre-commit-config.yaml  # ruff linter + formatter hooks
+    └── .gitignore
 
 ---
 
@@ -105,18 +128,58 @@ parquet files under data/raw/ and is not committed to the repository.
 | `make docs` | Build Sphinx HTML docs to docs/_build/html/ |
 | `make lint` | Run ruff linter |
 | `make format` | Run ruff formatter |
-| `make install-dev` | Install deps + pre-commit hooks (local dev) |
+| `make install-dev` | Install deps + pre-commit hooks (local dev only) |
 | `make docker-build` | Build Docker image |
 | `make docker-run` | Run pipeline in Docker |
 | `make docker-test` | Run tests in Docker |
 
 ---
 
+## Rendering the Report
+
+The Quarto report must be rendered inside the Docker container where all
+dependencies are available:
+
+    # inside the container
+    quarto render reports/eda_report.qmd
+
+    # copy the HTML output to your local machine (from PowerShell)
+    docker cp <container_name>:/app/reports/eda_report.html reports/eda_report.html
+    docker cp <container_name>:/app/reports/eda_report_files reports/eda_report_files
+
+Then open reports/eda_report.html in your browser.
+
+---
+
+## Viewing the Sphinx Docs
+
+    # inside the container
+    make docs
+
+    # copy the built HTML to your local machine (from PowerShell)
+    mkdir docs\_build
+    docker cp <container_name>:/app/docs/_build/html docs/_build/html
+
+Then open docs/_build/html/index.html in your browser.
+
+---
+
+## Compatibility Notes
+
+- pandas-ta 0.4.x removed the Strategy API — indicators are computed
+  individually via the df.ta accessor
+- yfinance 0.2+ returns MultiIndex columns — these are flattened in
+  the loader
+- Python 3.12 required (pandas-ta 0.4.x constraint)
+
+---
+
 ## Requirements
 
-- Docker Desktop
-- No local Python installation needed — everything runs inside the container
+- Docker Desktop (no local Python installation needed)
+- All dependencies are pinned in pyproject.toml and baked into the image
 
+---
 
 ## References
 
