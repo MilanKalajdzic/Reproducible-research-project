@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.abspath("../../src"))
 
 # ── Project information ───────────────────────────────────────────────────────
 project = "ETF Predictor"
-copyright = "2024, ETF Predictor Team"
-author = "ETF Predictor Team"
+copyright = ""
+author = ""
 release = "0.1.0"
 
 # ── General configuration ────────────────────────────────────────────────────

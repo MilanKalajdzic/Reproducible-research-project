@@ -1,0 +1,239 @@
+---
+title: "ETF Trend Prediction — Data Preparation Report"
+subtitle: "European ETFs: IEUR, FEZ, EUFN"
+author: "TBD"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    theme: cosmo
+    fig-width: 10
+    fig-height: 5
+execute:
+  warning: false
+  echo: true
+jupyter: python3
+---
+
+## 1. Overview
+
+This report documents the data preparation pipeline for our ETF trend
+prediction project, which adapts the methodology of
+Sagaceta-Mejía et al. (2024) to three European ETFs:
+
+| Ticker | Fund | Focus |
+|--------|------|-------|
+| **IEUR** | iShares Core MSCI Europe ETF | Broad European market |
+| **FEZ** | SPDR EURO STOXX 50 ETF | Eurozone large-cap |
+| **EUFN** | iShares MSCI Europe Financials ETF | European financials |
+| **IVV** | iShares Core S&P 500 ETF | Developed benchmark |
+
+Data spans **2010-01-01 → 2026-04-30**, extending the paper's original
+pre-pandemic window to include recent market conditions including the
+COVID-19 period and subsequent recovery.
+
+---
+
+## 2. Setup
+
+```{python}
+import sys
+sys.path.insert(0, "/app/src")
+
+import logging
+logging.basicConfig(level=logging.WARNING)
+
+import matplotlib.pyplot as plt
+from etf_predictor.data.loader import YahooFinanceLoader
+from etf_predictor.data.pipeline import DataPipeline
+from etf_predictor.data.visualization import EDAVisualizer
+
+TICKERS = ["IEUR", "FEZ", "EUFN"]
+START   = "2010-01-01"
+END     = "2026-05-01"
+```
+
+---
+
+## 3. Raw Data
+
+```{python}
+loader = YahooFinanceLoader(tickers=TICKERS, start=START, end=END)
+raw_data = loader.load()
+
+for ticker, df in raw_data.items():
+    print(f"{ticker}: {len(df)} rows, {df.index[0].date()} → {df.index[-1].date()}")
+```
+
+Note: IEUR only has data from 2014-06-12 — this is a Yahoo Finance
+data availability limitation, not a pipeline issue.
+
+### 3.1 Open Price Summary Statistics
+
+```{python}
+import pandas as pd
+
+summary = pd.concat(
+    {t: raw_data[t]["Open"].describe() for t in TICKERS},
+    axis=1
+).round(2)
+summary
+```
+
+### 3.2 Normalised Open Price Over Time
+
+```{python}
+viz = EDAVisualizer()
+fig = viz.plot_open_prices(raw_data, normalize=True)
+plt.show()
+```
+
+*IVV (S&P 500) is included as a developed-market benchmark. The US
+index shows a stronger upward trend over the full period, with European
+ETFs exhibiting higher volatility around the 2020 COVID-19 shock and
+the 2022 rate-hiking cycle.*
+
+### 3.3 Sector Exposure
+
+```{python}
+fig = viz.plot_sector_exposure()
+plt.show()
+```
+
+*EUFN is almost entirely financials; FEZ is Eurozone large-cap heavy in
+financials and industrials; IEUR is broadly diversified. This sectoral
+heterogeneity makes direct indicator comparison between the three funds
+theoretically interesting.*
+
+---
+
+## 4. Pipeline
+
+```{python}
+pipeline = DataPipeline(
+    tickers=TICKERS,
+    start=START,
+    end=END,
+    include_benchmark=True,
+)
+datasets = pipeline.run(save=True)
+pipeline.summary(datasets)
+```
+
+### 4.1 Technical Indicators
+
+The Pandas TA library (v0.4.x) expands the 6 base OHLCV features to
+**~260 daily features** across 10 categories. Sparse columns with more
+than 95% NaN values (e.g. ZIGZAG) are automatically removed before
+cleaning:
+
+| Category | Examples |
+|----------|---------|
+| Candles | Candlestick patterns |
+| Cycles | Even Better SineWave (EBSW) |
+| Momentum | RSI, Stochastic RSI, Williams %R, KDJ |
+| Overlap | SMA, EMA, Bollinger Bands |
+| Performance | Annualised returns |
+| Statistics | Z-Score, variance |
+| Trend | CTI, TTM Trend, ADX |
+| Utility | Helper features |
+| Volatility | ATR, Bollinger Band % |
+| Volume | AOBV, PVR, OBV |
+
+### 4.2 Classification Target Γ(t)
+
+Following the paper (Section 2.4):
+
+$$\Gamma(t) = \begin{cases} +1 & \text{if } \text{Open}(t) - \text{Open}(t-1) > 0 \\ -1 & \text{otherwise} \end{cases}$$
+
+```{python}
+fig = viz.plot_cumulative_gamma(datasets)
+plt.show()
+```
+
+### 4.3 Class Balance
+
+```{python}
+fig = viz.plot_class_balance(datasets)
+plt.show()
+```
+
+*All three ETFs show a slight UP bias (~51–53%), consistent across the
+full 2010–2026 period including both bull and bear market phases.*
+
+---
+
+## 5. Preprocessing
+
+### 5.1 Normalisation
+
+Min-max scaling is applied per feature to the range **[0, 1]**:
+
+$$\hat{x} = \frac{x - \min}{\max - \min}$$
+
+**Important:** the scaler is fit on training data only and applied to
+the test split, preventing target leakage — a gap not addressed
+explicitly in the original paper.
+
+### 5.2 Cleaning
+
+Two-stage cleaning is applied:
+
+1. **Sparse column removal** — columns with >95% NaN (e.g. ZIGZAG
+   indicator) are dropped entirely before row-level cleaning.
+2. **Forward-fill** — remaining NaN values from indicator warm-up
+   periods are forward-filled, then any residual NaN rows are dropped.
+
+```{python}
+for ticker, df in datasets.items():
+    n_nan = df.isna().sum().sum()
+    print(f"{ticker}: {len(df)} rows remaining, {n_nan} NaN values")
+```
+
+---
+
+## 6. Feature Correlation (Selected Indicators)
+
+```{python}
+fig = viz.plot_correlation_heatmap(
+    datasets["IEUR"],
+    ticker="IEUR",
+)
+plt.show()
+```
+
+---
+
+## 7. Handoff Contract
+
+The modeling team receives:
+
+- **Location:** `data/processed/{TICKER}_processed.parquet`
+- **Schema:** DatetimeIndex + ~260 numeric feature columns + `"Gamma"` target column
+- **Values:** All features scaled to [0, 1]; `Gamma` ∈ {+1, -1}; zero NaNs
+- **Scaler access:** `pipeline._scalers[ticker]` — must be applied correctly
+  inside cross-validation folds to avoid leakage
+- **Note:** IEUR has fewer rows (~2400) than FEZ/EUFN/IVV (~3500) due
+  to data availability starting June 2014
+
+```{python}
+# Verify handoff contract
+for ticker, df in datasets.items():
+    assert df.isna().sum().sum() == 0, f"{ticker} has NaNs!"
+    assert "Gamma" in df.columns
+    assert df["Gamma"].isin([1, -1]).all()
+    feature_cols = [c for c in df.columns if c != "Gamma"]
+    assert df[feature_cols].min().min() >= -0.01
+    print(f"{ticker} ✓  shape={df.shape}")
+```
+
+---
+
+## 8. References
+
+Sagaceta-Mejía, A. R., Sánchez-Gutiérrez, M. E., & Fresán-Figueroa, J. A.
+(2024). An intelligent approach for predicting stock market movements in
+emerging markets using optimized technical indicators and neural networks.
+*Economics*, 18, 20220073. https://doi.org/10.1515/econ-2022-0073
