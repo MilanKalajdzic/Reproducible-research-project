@@ -51,8 +51,9 @@ class TestMinMaxScaler:
         df = pd.DataFrame({"A": [5.0, 5.0, 5.0], "B": [1.0, 2.0, 3.0]})
         scaler = MinMaxScaler()
         result = scaler.fit_transform(df)
-        # Constant column should yield NaN (not raise)
-        assert result["A"].isna().all()
+        # Constant column should yield 0.0 (not raise, not NaN)
+        assert not result["A"].isna().any()
+        assert (result["A"] == 0.0).all()
 
     def test_fit_on_train_apply_to_test(self, sample_df):
         train = sample_df.iloc[:3]
