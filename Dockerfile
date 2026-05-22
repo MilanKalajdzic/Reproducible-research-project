@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1: base image with system deps
 # ─────────────────────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS base
+FROM python:3.12-slim AS base
 
 # Prevent .pyc files and enable unbuffered stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -23,9 +23,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ─────────────────────────────────────────────────────────────────────────────
 FROM base AS deps
 
-COPY pyproject.toml ./
-# Install the package in editable mode with all extras
-RUN pip install -e ".[dev,notebook]"
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+
+RUN pip install ".[dev,notebook]"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 3: final image
@@ -37,6 +38,7 @@ COPY src/ ./src/
 COPY tests/ ./tests/
 COPY notebooks/ ./notebooks/
 COPY reports/ ./reports/
+COPY scripts/ ./scripts/
 COPY Makefile ./
 COPY .pre-commit-config.yaml ./
 

@@ -52,16 +52,8 @@ class TargetBuilder:
         self.horizon = horizon
         self.target_col = target_col
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     def build(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add the Γ column to *df* and drop the first row.
-
-        The first row is dropped because Γ(t) requires Open(t−1),
-        making the very first observation undefined (matches paper
-        Section 2.6 behaviour).
 
         Parameters
         ----------
@@ -83,11 +75,17 @@ class TargetBuilder:
             raise KeyError("DataFrame must contain an 'Open' column.")
 
         result = df.copy()
-        delta = result["Open"].diff(self.horizon)
-        result[self.target_col] = delta.apply(
-            lambda x: UP_LABEL if x > 0 else DOWN_LABEL
+
+        open_series = result["Open"]
+        if isinstance(open_series, pd.DataFrame):
+            open_series = open_series.iloc[:, 0]
+        open_series = open_series.squeeze()
+
+        delta = open_series.diff(self.horizon)
+        result[self.target_col] = (
+            (delta > 0).astype(int).replace({1: UP_LABEL, 0: DOWN_LABEL})
         )
-        # Drop rows where delta is NaN (warm-up period)
+
         result = result.iloc[self.horizon:].copy()
 
         up_count = (result[self.target_col] == UP_LABEL).sum()

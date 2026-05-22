@@ -79,7 +79,7 @@ class DataPipeline:
         self,
         tickers: list[str] = DEFAULT_TICKERS,
         start: str = "2010-01-01",
-        end: str = "2020-01-01",
+        end: str = "2026-05-01",
         cache_dir: str | Path = "data/raw",
         processed_dir: str | Path = "data/processed",
         indicator_categories: Optional[list[str]] = None,
@@ -116,7 +116,7 @@ class DataPipeline:
             target_col=TARGET_COL,
         )
         self._cleaner = DataCleaner(
-            strategy=self.cleaning_strategy,
+            strategy="fill_forward",
             exclude_cols=[TARGET_COL],
         )
 

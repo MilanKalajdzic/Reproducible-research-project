@@ -18,9 +18,6 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Categories available in pandas-ta that we want to compute.
-# Matches the paper's taxonomy: Candles, Cycles, Momentum, Overlap,
-# Performance, Statistics, Trend, Utility, Volatility, Volume.
 ALL_CATEGORIES = [
     "candles",
     "cycles",
@@ -40,8 +37,7 @@ class TechnicalIndicators:
 
     Applies the full pandas-ta strategy (or a filtered subset of
     categories) to a raw OHLCV DataFrame and returns the augmented
-    DataFrame. Indicator computation is the most expensive step in
-    the pipeline; results are optionally cached.
+    DataFrame.
 
     Parameters
     ----------
@@ -50,8 +46,7 @@ class TechnicalIndicators:
         (default) to compute all categories, replicating the paper's
         ~210 indicators.
     exclude_cols : list[str] or None
-        Column names to drop after indicator computation (e.g.
-        intermediate columns not needed downstream).
+        Column names to drop after indicator computation.
 
     Examples
     --------
@@ -69,7 +64,6 @@ class TechnicalIndicators:
         self.categories = categories or ALL_CATEGORIES
         self.exclude_cols = exclude_cols or []
 
-        # Validate categories
         invalid = set(self.categories) - set(ALL_CATEGORIES)
         if invalid:
             raise ValueError(
@@ -95,7 +89,6 @@ class TechnicalIndicators:
         -------
         pd.DataFrame
             Original columns plus all computed indicator columns.
-            Column count should approach ~216 for the full strategy.
 
         Raises
         ------
@@ -111,27 +104,45 @@ class TechnicalIndicators:
             ) from exc
 
         result = df.copy()
-
-        # pandas-ta expects lowercase column names for some indicators
         result = self._rename_for_ta(result)
 
         logger.info(
             "Computing indicators for categories: %s", self.categories
         )
 
-        # Build a custom strategy from the selected categories
-        strategy = ta.Strategy(
-            name="etf_predictor_strategy",
-            description="All selected categories from pandas-ta",
-            ta=[
-                {"kind": indicator}
-                for indicator in self._get_indicator_list()
-            ],
-        )
+        # pandas-ta 0.4.x removed Strategy — call each indicator
+        # individually and collect results into a list of DataFrames.
+        indicator_frames: list[pd.DataFrame] = []
+        for indicator in self._get_indicator_list():
+            try:
+                fn = getattr(result.ta, indicator, None)
+                if fn is None:
+                    continue
+                out = fn()
+                if out is None:
+                    continue
+                if isinstance(out, pd.Series):
+                    out = out.to_frame()
+                elif isinstance(out, tuple):
+                    out = pd.concat(
+                        [x.to_frame() if isinstance(x, pd.Series) else x
+                         for x in out if isinstance(x, (pd.Series, pd.DataFrame))],
+                        axis=1
+                    )
+                if not isinstance(out, pd.DataFrame) or out.empty:
+                    continue
+                indicator_frames.append(out)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Skipping indicator %s: %s", indicator, exc)
 
-        result.ta.strategy(strategy, verbose=False)
+        if indicator_frames:
+            indicators_df = pd.concat(indicator_frames, axis=1)
+            # Drop duplicate columns that some indicators produce
+            indicators_df = indicators_df.loc[
+                :, ~indicators_df.columns.duplicated()
+            ]
+            result = pd.concat([result, indicators_df], axis=1)
 
-        # Restore original column case
         result = self._restore_col_names(result, df)
 
         # Drop any explicitly excluded columns
@@ -167,7 +178,11 @@ class TechnicalIndicators:
     # ------------------------------------------------------------------
 
     def _get_indicator_list(self) -> list[str]:
-        """Return all pandas-ta indicator names for selected categories."""
+        """Return all pandas-ta indicator names for selected categories.
+
+        Falls back to inspecting the ta accessor directly if the
+        Category dict is empty (API changed in 0.4.x).
+        """
         try:
             import pandas_ta as ta  # noqa: PLC0415
         except ImportError as exc:
@@ -175,9 +190,39 @@ class TechnicalIndicators:
 
         indicators: list[str] = []
         for category in self.categories:
-            # pandas-ta organises indicators in ta.Category dict
-            cat_indicators = ta.Category.get(category, [])
+            cat_indicators = getattr(ta, "Category", {}).get(category, [])
             indicators.extend(cat_indicators)
+
+        # Fallback for new API where Category dict may be empty
+        if not indicators:
+            dummy = pd.DataFrame(
+                {
+                    "open": [1.0, 2.0, 3.0],
+                    "high": [1.5, 2.5, 3.5],
+                    "low": [0.5, 1.5, 2.5],
+                    "close": [1.2, 2.2, 3.2],
+                    "volume": [1000.0, 1100.0, 1200.0],
+                }
+            )
+            skip = {
+                "strategy", "indicators", "categories",
+                "ticker", "trades", "above", "below",
+                "above_value", "below_value", "cross",
+                "cross_value", "long_run", "short_run",
+                "datetime_ordered", "reverse", "to_utc",
+                "adjusted", "cores",
+            }
+            indicators = [
+                m for m in dir(dummy.ta)
+                if not m.startswith("_")
+                and callable(getattr(dummy.ta, m))
+                and m not in skip
+            ]
+            logger.info(
+                "Category dict empty — using %d indicators from accessor.",
+                len(indicators),
+            )
+
         return indicators
 
     @staticmethod

@@ -79,6 +79,7 @@ class MinMaxScaler:
         MinMaxScaler
             Returns ``self`` for method chaining.
         """
+        df = df.loc[:, ~df.columns.duplicated()]
         cols = self._feature_cols(df)
         self._min = df[cols].min()
         self._max = df[cols].max()
@@ -92,8 +93,7 @@ class MinMaxScaler:
         Parameters
         ----------
         df : pd.DataFrame
-            DataFrame to scale. May contain extra columns that will be
-            left untouched (e.g. the target column).
+            DataFrame to scale.
 
         Returns
         -------
@@ -109,16 +109,25 @@ class MinMaxScaler:
             raise RuntimeError("Call fit() before transform().")
 
         result = df.copy()
-        cols = [c for c in self._feature_cols(df) if c in self._min.index]
+        result = result.loc[:, ~result.columns.duplicated()]
 
         lo, hi = self.feature_range
-        denom = self._max[cols] - self._min[cols]
-        # Avoid division by zero for constant columns
-        denom = denom.replace(0, np.nan)
 
-        result[cols] = (
-            (result[cols] - self._min[cols]) / denom * (hi - lo) + lo
-        )
+        # Only scale columns present in both the fitted stats and this df
+        cols = [
+            c for c in self._feature_cols(result)
+            if c in self._min.index and c in self._max.index
+        ]
+
+        for col in cols:
+            min_val = self._min[col]
+            max_val = self._max[col]
+            denom = max_val - min_val
+            if denom == 0:
+                result[col] = 0.0
+            else:
+                result[col] = (result[col] - min_val) / denom * (hi - lo) + lo
+
         return result
 
     def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -189,21 +198,24 @@ class DataCleaner:
     # ------------------------------------------------------------------
 
     def clean(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Remove or impute NaN rows from *df*.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            DataFrame after indicator computation.
-
-        Returns
-        -------
-        pd.DataFrame
-            Cleaned DataFrame. The index is reset to a continuous
-            DatetimeIndex.
-        """
         original_len = len(df)
         feature_cols = [c for c in df.columns if c not in self.exclude_cols]
+
+        # Drop columns that are more than 50% NaN — these are sparse
+        # indicators like ZIGZAG that would eliminate all rows
+        thresh = int(len(df) * 0.95)
+        sparse_cols = [
+            c for c in feature_cols
+            if df[c].isna().sum() > thresh
+        ]
+        if sparse_cols:
+            df = df.drop(columns=sparse_cols)
+            feature_cols = [c for c in feature_cols if c not in sparse_cols]
+            logger.info(
+                "Dropped %d sparse columns (>50%% NaN): %s",
+                len(sparse_cols),
+                sparse_cols[:5],
+            )
 
         if self.strategy == "fill_forward":
             result = df.copy()

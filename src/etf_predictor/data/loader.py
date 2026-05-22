@@ -46,7 +46,7 @@ class YahooFinanceLoader:
     >>> loader = YahooFinanceLoader(
     ...     tickers=["IEUR", "FEZ", "EUFN"],
     ...     start="2010-01-01",
-    ...     end="2020-01-01",
+    ...     end="2026-05-01",
     ... )
     >>> raw_data = loader.load()
     >>> raw_data["IEUR"].head()
@@ -56,7 +56,7 @@ class YahooFinanceLoader:
         self,
         tickers: list[str] = DEFAULT_TICKERS,
         start: str = "2010-01-01",
-        end: str = "2020-01-01",
+        end: str = "2026-05-01",
         cache_dir: str | Path = "data/raw",
         include_benchmark: bool = True,
     ) -> None:
@@ -145,6 +145,7 @@ class YahooFinanceLoader:
         # yfinance may return MultiIndex columns — flatten them
         if isinstance(raw.columns, pd.MultiIndex):
             raw.columns = raw.columns.get_level_values(0)
+            raw = raw.loc[:, ~raw.columns.duplicated()]
 
         df = raw[OHLCV_COLS].copy()
         df.index = pd.to_datetime(df.index)
