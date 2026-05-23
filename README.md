@@ -20,9 +20,9 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 
     # 4. Inside the container — run everything in order:
     make data       # download and process ETF data
-    make test       # run 25 unit tests
+    make test       # run 34 unit tests
     make eda        # generate EDA figures to reports/figures/
-    PYTHONPATH=src python scripts/run_analysis.py   # run statistical analysis
+    make analysis   # run statistical analysis
     make docs       # build Sphinx HTML docs to docs/_build/html/
 
     # 5. Render the Quarto report (inside container)
@@ -79,6 +79,8 @@ Note: IEUR data starts June 2014 — Yahoo Finance data availability limitation.
 | EUFN | ~3500 | ~265 | 51.7 | 48.3 |
 | IVV | ~3500 | ~263 | 55.7 | 44.3 |
 
+---
+
 ## Statistical Analysis Pipeline
 
 In addition to EDA, the project includes a statistical analysis layer for
@@ -94,7 +96,7 @@ This stage performs:
 
 Run it with:
 
-    PYTHONPATH=src python scripts/run_analysis.py
+    make analysis
 
 Outputs are saved to:
 
@@ -155,7 +157,7 @@ The corresponding Quarto report can be rendered with:
 |--------|-------------|
 | `make data` | Download and process all ETF data |
 | `make eda` | Generate all EDA figures to reports/figures/ |
-| `make test` | Run 25 pytest unit tests |
+| `make test` | Run 34 pytest unit tests |
 | `make coverage` | Pytest with HTML coverage report |
 | `make docs` | Build Sphinx HTML docs to docs/_build/html/ |
 | `make lint` | Run ruff linter |
@@ -164,7 +166,7 @@ The corresponding Quarto report can be rendered with:
 | `make docker-build` | Build Docker image |
 | `make docker-run` | Run pipeline in Docker |
 | `make docker-test` | Run tests in Docker |
-
+| `make analysis` | Run statistical analysis pipeline |
 ---
 
 ## Rendering the Report
@@ -180,7 +182,7 @@ dependencies are available:
     docker cp <container_name>:/app/reports/eda_report.html reports/eda_report.html
     docker cp <container_name>:/app/reports/eda_report_files reports/eda_report_files
 
-Then open reports/eda_report.html in your browser.
+Then open `reports/eda_report.html` or `reports/statistical_analysis.html` in your browser.
 
 ---
 
@@ -204,6 +206,7 @@ Then open docs/_build/html/index.html in your browser.
 - yfinance 0.2+ returns MultiIndex columns — these are flattened in
   the loader
 - Python 3.12 required (pandas-ta 0.4.x constraint)
+- statsmodels is required for ADF testing and ARIMA baselines
 
 ---
 
