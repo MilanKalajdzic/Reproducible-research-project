@@ -22,10 +22,12 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
     make data       # download and process ETF data
     make test       # run 25 unit tests
     make eda        # generate EDA figures to reports/figures/
+    PYTHONPATH=src python scripts/run_analysis.py   # run statistical analysis
     make docs       # build Sphinx HTML docs to docs/_build/html/
 
     # 5. Render the Quarto report (inside container)
     quarto render reports/eda_report.qmd
+    quarto render reports/statistical_analysis.qmd
 
     # 6. Copy rendered report out to your local machine (from PowerShell)
     docker cp <container_name>:/app/reports/eda_report.html reports/eda_report.html
@@ -77,43 +79,72 @@ Note: IEUR data starts June 2014 — Yahoo Finance data availability limitation.
 | EUFN | ~3500 | ~265 | 51.7 | 48.3 |
 | IVV | ~3500 | ~263 | 55.7 | 44.3 |
 
+## Statistical Analysis Pipeline
+
+In addition to EDA, the project includes a statistical analysis layer for
+feature diagnostics and time-series baselines.
+
+This stage performs:
+
+- feature variance analysis
+- correlation redundancy analysis
+- Random Forest feature importance
+- ADF stationarity tests
+- ARIMA(1,1,1) baseline forecasting
+
+Run it with:
+
+    PYTHONPATH=src python scripts/run_analysis.py
+
+Outputs are saved to:
+
+    reports/results/
+
+The corresponding Quarto report can be rendered with:
+
+    quarto render reports/statistical_analysis.qmd
 ---
 
 ## Project Structure
 
-    ├── src/etf_predictor/
-    │   └── data/
-    │       ├── __init__.py
-    │       ├── loader.py        # YahooFinanceLoader — download + parquet cache
-    │       ├── targets.py       # TargetBuilder      — Γ(t) label construction
-    │       ├── indicators.py    # TechnicalIndicators — pandas-ta 0.4.x wrapper
-    │       ├── preprocessing.py # MinMaxScaler, DataCleaner
-    │       ├── pipeline.py      # DataPipeline       — orchestrates all steps
-    │       └── visualization.py # EDAVisualizer      — all EDA figures
-    ├── tests/
-    │   └── data/
-    │       ├── test_loader.py
-    │       ├── test_targets.py
-    │       └── test_preprocessing.py
-    ├── reports/
-    │   └── eda_report.qmd       # Quarto report source — render with quarto render
-    ├── scripts/
-    │   └── generate_eda.py      # called by make eda
-    ├── docs/
-    │   └── source/              # Sphinx documentation source
-    │       ├── conf.py
-    │       ├── index.rst
-    │       └── modules.rst
-    ├── notebooks/               # exploration notebooks (not for submission)
-    ├── data/
-    │   ├── raw/                 # downloaded parquet files (git-ignored)
-    │   └── processed/           # processed parquet files (git-ignored)
-    ├── Dockerfile               # Python 3.12-slim, single image for all collaborators
-    ├── docker-compose.yml       # services: etf-predictor, test, notebook
-    ├── Makefile                 # automation targets
-    ├── pyproject.toml           # dependencies + ruff linting config
-    ├── .pre-commit-config.yaml  # ruff linter + formatter hooks
-    └── .gitignore
+├── src/etf_predictor/
+│   ├── analysis/
+│   │   ├── __init__.py
+│   │   ├── correlation_analysis.py
+│   │   ├── feature_analysis.py
+│   │   ├── feature_importance.py
+│   │   ├── time_series.py
+│   │   └── variance_analysis.py
+│   └── data/
+│       ├── __init__.py
+│       ├── loader.py
+│       ├── targets.py
+│       ├── indicators.py
+│       ├── preprocessing.py
+│       ├── pipeline.py
+│       └── visualization.py
+├── tests/
+│   ├── analysis/
+│   │   ├── test_correlation_analysis.py
+│   │   ├── test_feature_analysis.py
+│   │   ├── test_feature_importance.py
+│   │   └── test_time_series.py
+│   └── data/
+│       ├── test_loader.py
+│       ├── test_targets.py
+│       └── test_preprocessing.py
+├── reports/
+│   ├── eda_report.qmd
+│   ├── statistical_analysis.qmd
+│   └── results/
+│       ├── *_summary.csv
+│       ├── *_feature_importance.csv
+│       ├── *_high_corr.csv
+│       ├── *_variance.csv
+│       └── *_arima_summary.csv
+├── scripts/
+│   ├── generate_eda.py
+│   └── run_analysis.py
 
 ---
 
@@ -142,6 +173,7 @@ dependencies are available:
 
     # inside the container
     quarto render reports/eda_report.qmd
+    quarto render reports/statistical_analysis.qmd
 
     # copy the HTML output to your local machine (from PowerShell)
     docker cp <container_name>:/app/reports/eda_report.html reports/eda_report.html
