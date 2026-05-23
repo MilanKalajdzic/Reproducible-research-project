@@ -1,0 +1,2 @@
+ticker,n_features,n_high_corr_pairs,rf_test_accuracy,gamma_up_share,gamma_down_share
+EUFN,265,4264,0.7589158345221113,0.5171330668189605,0.4828669331810394
