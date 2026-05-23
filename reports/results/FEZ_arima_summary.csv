@@ -1,0 +1,2 @@
+ticker,series,adf_statistic,adf_p_value,used_lags,n_obs,mae,rmse,train_size,test_size
+FEZ,Close,-0.9521914045637013,0.7702998168148091,6,3516,0.23801075511245232,0.2837003422315354,2818,705

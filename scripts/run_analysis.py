@@ -1,11 +1,11 @@
 from pathlib import Path
-
 import pandas as pd
 
 from etf_predictor.analysis.correlation_analysis import CorrelationAnalyzer
 from etf_predictor.analysis.feature_analysis import FeatureAnalyzer
 from etf_predictor.analysis.feature_importance import FeatureImportanceAnalyzer
 from etf_predictor.data.pipeline import DataPipeline
+from etf_predictor.analysis.time_series import TimeSeriesAnalyzer
 
 
 def main() -> None:
@@ -82,6 +82,37 @@ def main() -> None:
         print("\nTarget distribution:")
         print(y.value_counts(normalize=True))
 
+        if "Close" in df.columns:
+            ts_analyzer = TimeSeriesAnalyzer(df["Close"])
 
+            adf_results = ts_analyzer.adf_test()
+            arima_eval = ts_analyzer.evaluate_holdout(order=(1, 1, 1))
+
+            print("\nADF test results:")
+            print(adf_results)
+
+            print("\nARIMA(1,1,1) holdout evaluation:")
+            print(arima_eval)
+
+            arima_summary_df = pd.DataFrame(
+                {
+                    "ticker": [ticker],
+                    "series": ["Close"],
+                    "adf_statistic": [adf_results["adf_statistic"]],
+                    "adf_p_value": [adf_results["p_value"]],
+                    "used_lags": [adf_results["used_lags"]],
+                    "n_obs": [adf_results["n_obs"]],
+                    "mae": [arima_eval["mae"]],
+                    "rmse": [arima_eval["rmse"]],
+                    "train_size": [arima_eval["train_size"]],
+                    "test_size": [arima_eval["test_size"]],
+                }
+            )
+
+            arima_summary_df.to_csv(
+                results_dir / f"{ticker}_arima_summary.csv",
+                index=False,
+            )
+            
 if __name__ == "__main__":
     main()
