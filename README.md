@@ -146,7 +146,7 @@ The corresponding Quarto report can be rendered with:
 ├── scripts/
 │   ├── generate_eda.py
 │   └── run_analysis.py
-
+```
 ---
 
 ## Makefile Targets
