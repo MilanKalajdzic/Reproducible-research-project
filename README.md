@@ -107,6 +107,7 @@ The corresponding Quarto report can be rendered with:
 
 ## Project Structure
 
+```text
 ├── src/etf_predictor/
 │   ├── analysis/
 │   │   ├── __init__.py
