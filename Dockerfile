@@ -35,6 +35,11 @@ FROM base AS deps
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
+# Install CPU-only torch first from the PyTorch CPU wheel index so the
+# image stays small (no CUDA libs). The .[dev,notebook] install below
+# then sees torch already satisfied and skips the GPU wheel.
+RUN pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.2"
+
 RUN pip install ".[dev,notebook]"
 
 # ─────────────────────────────────────────────────────────────────────────────
