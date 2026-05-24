@@ -1,0 +1,2 @@
+ticker,n_features,n_high_corr_pairs,rf_test_accuracy,gamma_up_share,gamma_down_share
+FEZ,266,4321,0.7531914893617021,0.5237013908600624,0.47629860913993755

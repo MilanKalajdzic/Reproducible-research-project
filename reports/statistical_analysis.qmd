@@ -1,0 +1,132 @@
+---
+title: "Statistical Diagnostics and Time-Series Baseline"
+format: html
+execute:
+  echo: false
+  warning: false
+  message: false
+jupyter: python3
+---
+
+```{python}
+from pathlib import Path
+import pandas as pd
+
+results_dir = Path("results")
+tickers = ["IEUR", "FEZ", "EUFN", "IVV"]
+
+summary_frames = []
+arima_frames = []
+
+for ticker in tickers:
+    summary_frames.append(pd.read_csv(results_dir / f"{ticker}_summary.csv"))
+    arima_frames.append(pd.read_csv(results_dir / f"{ticker}_arima_summary.csv"))
+
+summary_df = pd.concat(summary_frames, ignore_index=True)
+arima_df = pd.concat(arima_frames, ignore_index=True)
+```
+
+## Overview
+
+This report presents the statistical diagnostics and time-series baseline analysis for the ETF prediction project. The analysis focuses on four ETFs: IEUR, FEZ, EUFN, and IVV. For each ETF, we evaluated feature variance, pairwise correlation redundancy, Random Forest feature importance, and a univariate ARIMA baseline on the closing-price series.
+
+## Summary Table
+
+```{python}
+merged = summary_df.merge(
+    arima_df[["ticker", "adf_p_value", "mae", "rmse"]],
+    on="ticker",
+    how="left",
+)
+
+merged = merged.rename(
+    columns={
+        "ticker": "Ticker",
+        "n_features": "Number of Features",
+        "n_high_corr_pairs": "Highly Correlated Pairs (>0.95)",
+        "rf_test_accuracy": "Random Forest Accuracy",
+        "gamma_up_share": "Gamma Up Share",
+        "gamma_down_share": "Gamma Down Share",
+        "adf_p_value": "ADF p-value",
+        "mae": "ARIMA MAE",
+        "rmse": "ARIMA RMSE",
+    }
+)
+
+merged
+```
+
+## Feature Variance Analysis
+
+The processed datasets contain a large number of technical indicators, with approximately 263 to 266 features per ETF. The highest-variance indicators differ slightly across ETFs, but several variables appear repeatedly near the top, including `INC_1`, `DEC_1`, `AOBV_LR_2`, `AOBV_SR_2`, and `AMATe_*`. This suggests that a subset of trend- and momentum-related indicators exhibits greater dispersion over time.
+
+Variance should not be interpreted as predictive importance on its own. In this project, it is used as an initial descriptive diagnostic to identify features that vary meaningfully across observations.
+
+## Correlation Redundancy
+
+A major finding of the analysis is the very high redundancy in the feature space. For each ETF, we counted the number of feature pairs with absolute correlation above 0.95. The totals are very large, indicating that many technical indicators contain nearly identical information.
+
+```{python}
+merged[["Ticker", "Highly Correlated Pairs (>0.95)"]]
+```
+
+Many of the highly correlated pairs are in fact perfectly correlated. This strongly motivates feature-selection or dimensionality-reduction steps before final model training.
+
+## Feature Importance
+
+To assess predictive usefulness, we fitted a Random Forest classifier for each ETF and extracted feature-importance scores. The most important indicators are relatively consistent across ETFs, especially the `SMC*` family, along with indicators such as `CRSI_3_2_100`, `BBP_5_2.0_2.0`, `THERMO_20_2_0.5`, `CFO_9`, `BOP`, and short-horizon return features.
+
+```{python}
+top_features = []
+
+for ticker in tickers:
+    df = pd.read_csv(results_dir / f"{ticker}_feature_importance.csv")
+    df["Ticker"] = ticker
+    top_features.append(df.head(5))
+
+top_features_df = pd.concat(top_features, ignore_index=True)
+top_features_df[["Ticker", "feature", "importance"]]
+```
+
+The Random Forest test accuracies range from approximately 0.71 to 0.76, which is clearly above the class-balance baseline implied by the target distribution. This suggests that the selected technical indicators do contain useful predictive signal for short-term directional classification.
+
+## Time-Series Diagnostics and ARIMA Baseline
+
+As a univariate time-series benchmark, we applied an ADF stationarity test and an ARIMA(1,1,1) model to the `Close` price series for each ETF.
+
+```{python}
+arima_display = arima_df.rename(
+    columns={
+        "ticker": "Ticker",
+        "series": "Series",
+        "adf_statistic": "ADF Statistic",
+        "adf_p_value": "ADF p-value",
+        "used_lags": "Used Lags",
+        "n_obs": "Observations",
+        "mae": "ARIMA MAE",
+        "rmse": "ARIMA RMSE",
+        "train_size": "Train Size",
+        "test_size": "Test Size",
+    }
+)
+
+arima_display
+```
+
+The ADF p-values are high for all four ETFs, which indicates that the raw closing-price series are non-stationary. This supports the use of differencing, and therefore the ARIMA(1,1,1) specification is a sensible baseline.
+
+The ARIMA results are not directly comparable with the Random Forest classification results, because ARIMA forecasts a continuous price series, while the Random Forest predicts the binary target $\Gamma$. For that reason, ARIMA should be interpreted here as a univariate forecasting baseline rather than a direct competitor to the classification model.
+
+## Interpretation
+
+The analysis produces three main conclusions:
+
+1. The technical-indicator feature space is large and highly redundant.
+2. Despite this redundancy, a relatively small subset of indicators appears consistently important across ETFs.
+3. The ETF closing-price series are non-stationary, so classical time-series baselines require differencing and should be interpreted separately from directional classification models.
+
+These findings support the broader modeling strategy of combining technical-indicator engineering with predictive modeling, while also emphasizing the importance of reproducibility, feature selection, and careful interpretation.
+
+## Limitations
+
+One limitation is that the Random Forest and ARIMA models address different prediction tasks and use different evaluation metrics. Another important limitation is that preprocessing and scaling decisions in the broader pipeline should be checked carefully to avoid leakage in the final modeling workflow.

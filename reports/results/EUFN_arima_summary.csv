@@ -1,0 +1,2 @@
+ticker,series,adf_statistic,adf_p_value,used_lags,n_obs,mae,rmse,train_size,test_size
+EUFN,Close,-0.527011905250948,0.8866366483678525,6,3495,0.3075442728003419,0.3811031704267076,2801,701

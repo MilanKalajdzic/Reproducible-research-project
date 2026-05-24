@@ -3,7 +3,8 @@
 # Usage:  make <target>
 # ─────────────────────────────────────────────────────────────────────────────
 
-PYTHON     := python
+PYTHON     := python3
+RUNPY      := PYTHONPATH=src $(PYTHON)
 SRC        := src/etf_predictor
 TESTS      := tests
 REPORTS    := reports
@@ -12,7 +13,7 @@ DOCS_BUILD := docs/_build/html
 IMAGE_NAME := etf-predictor
 
 .PHONY: help install install-dev lint format test coverage \
-        data eda docs clean docker-build docker-run docker-test
+        data eda analysis docs clean clean-data docker-build docker-run docker-test
 
 # ── Default target ───────────────────────────────────────────────────────────
 help:
@@ -27,8 +28,10 @@ help:
 	@echo "  coverage      Run pytest with HTML coverage report"
 	@echo "  data          Download & process all ETF data"
 	@echo "  eda           Generate all EDA figures to reports/figures/"
+	@echo "  analysis      Run statistical analysis pipeline"
 	@echo "  docs          Build Sphinx HTML documentation"
 	@echo "  clean         Remove build/cache/data artefacts"
+	@echo "  clean-data    Remove raw and processed data"
 	@echo "  docker-build  Build Docker image"
 	@echo "  docker-run    Run pipeline inside Docker container"
 	@echo "  docker-test   Run tests inside Docker container"
@@ -36,10 +39,10 @@ help:
 
 # ── Installation ─────────────────────────────────────────────────────────────
 install:
-	pip install -e .
+	$(PYTHON) -m pip install -e .
 
 install-dev:
-	pip install -e ".[dev,notebook]"
+	$(PYTHON) -m pip install -e ".[dev,notebook]"
 	pre-commit install
 
 # ── Linting & formatting ─────────────────────────────────────────────────────
@@ -51,15 +54,15 @@ format:
 
 # ── Testing ──────────────────────────────────────────────────────────────────
 test:
-	pytest $(TESTS) -v
+	PYTHONPATH=src pytest $(TESTS) -v
 
 coverage:
-	pytest $(TESTS) --cov=$(SRC) --cov-report=html --cov-report=term
+	PYTHONPATH=src pytest $(TESTS) --cov=etf_predictor --cov-report=html --cov-report=term
 	@echo "HTML report: htmlcov/index.html"
 
 # ── Data pipeline ────────────────────────────────────────────────────────────
 data:
-	$(PYTHON) -c "\
+	$(RUNPY) -c "\
 from etf_predictor.data.pipeline import DataPipeline; \
 p = DataPipeline(); \
 datasets = p.run(); \
@@ -67,7 +70,11 @@ print(p.summary(datasets))"
 
 # ── EDA figures ──────────────────────────────────────────────────────────────
 eda:
-	$(PYTHON) scripts/generate_eda.py
+	$(RUNPY) scripts/generate_eda.py
+
+# ── Statistical analysis ─────────────────────────────────────────────────────
+analysis:
+	$(RUNPY) scripts/run_analysis.py
 
 # ── Documentation ────────────────────────────────────────────────────────────
 docs:
