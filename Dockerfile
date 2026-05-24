@@ -20,9 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
-    && curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb \
-    && dpkg -i quarto-linux-amd64.deb \
-    && rm quarto-linux-amd64.deb \
+    && ARCH="$(dpkg --print-architecture)" \
+    && curl -LO "https://quarto.org/download/latest/quarto-linux-${ARCH}.deb" \
+    && dpkg -i "quarto-linux-${ARCH}.deb" \
+    && rm "quarto-linux-${ARCH}.deb" \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install jupyter
