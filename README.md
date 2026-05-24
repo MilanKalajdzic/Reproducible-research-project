@@ -10,7 +10,7 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 ## Quick Start (Docker — recommended)
 
     # 1. Pull the image from DockerHub
-    docker pull ##!!!!!TBD!!!!!
+    docker pull milankalajdzic/etf-predictor:latest
 
     # 2. Or build locally
     docker compose build
