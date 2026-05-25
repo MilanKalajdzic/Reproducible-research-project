@@ -1,9 +1,7 @@
 """
-run_modeling.py
----------------
 Train the MLP signal model and the LSTM value model on every ETF in the
 processed dataset, evaluate both with expanding-window walk-forward
-validation, and emit:
+validation
 
     reports/figures/equity_<TICKER>.png            equity-curve comparison
     reports/figures/fold_accuracy_<TICKER>.png     per-fold accuracy bars
@@ -12,7 +10,6 @@ validation, and emit:
     reports/results/<TICKER>_<model>_predictions.csv   day-level signals
 
 Usage
------
     PYTHONPATH=src python scripts/run_modeling.py
     # or
     make modeling
