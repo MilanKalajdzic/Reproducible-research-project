@@ -337,13 +337,161 @@ Key takeaways from the table:
 
 ---
 
-## 6. Reproducing the results
+## 6. Feature selection — top-10 vs full feature set
+
+Sagaceta-Mejía et al. (2024) report that training the MLP on the
+**Selected(5)** subset (≈5% of the ~216 Pandas TA indicators) improved
+median 10-fold accuracy by ~2 pp over the full feature set on ECH /
+EWZ / IVV. To stress-test that claim on our 2010-2026 European ETFs
+(plus IVV as a US benchmark), we re-ran the walk-forward harness on a
+much smaller input space: the **top-10 features per ticker** taken
+directly from each ticker's
+`reports/results/<TICKER>_feature_importance.csv` ranking that the
+preprocessing team produced upstream.
+
+### 6.1 Selected features per ticker
+
+```{python}
+#| label: top10-feature-list
+top10 = {
+    t: pd.read_csv(RESULTS / f"{t}_feature_importance.csv")["feature"].head(10).tolist()
+    for t in TICKERS
+}
+pd.DataFrame.from_dict(top10, orient="index").T
+```
+
+Across all four tickers, the top of the ranking is dominated by
+**Smart Money Concept** indicators (`SMCtp`, `SMCbi`, `SMCbp`,
+`SMCti`) and a handful of the same features called out in the paper's
+Selected(5) — **BOP**, **BBP** and (on EUFN/IVV) **PVR** — confirming
+that the importance ranking surfaces broadly similar signals to the
+paper's statistical-measure pipeline.
+
+### 6.2 Reduced-set walk-forward results
+
+```{python}
+#| label: load-top10-metrics
+metrics_top10 = {
+    t: pd.read_csv(RESULTS / f"{t}_walkforward_metrics_top10.csv", index_col=0)
+    for t in TICKERS
+}
+pd.concat(
+    {t: m[["total_return", "annual_return", "sharpe", "max_drawdown", "hit_rate"]]
+     for t, m in metrics_top10.items()},
+    names=["ticker"],
+).round(4)
+```
+
+Equity curves and per-fold accuracy under the reduced feature set:
+
+::: {layout-ncol=2}
+![EUFN — top-10 features](figures/equity_EUFN_top10.png)
+
+![FEZ — top-10 features](figures/equity_FEZ_top10.png)
+
+![IEUR — top-10 features](figures/equity_IEUR_top10.png)
+
+![IVV — top-10 features](figures/equity_IVV_top10.png)
+:::
+
+::: {layout-ncol=2}
+![EUFN — per-fold accuracy (top-10)](figures/fold_accuracy_EUFN_top10.png)
+
+![FEZ — per-fold accuracy (top-10)](figures/fold_accuracy_FEZ_top10.png)
+
+![IEUR — per-fold accuracy (top-10)](figures/fold_accuracy_IEUR_top10.png)
+
+![IVV — per-fold accuracy (top-10)](figures/fold_accuracy_IVV_top10.png)
+:::
+
+### 6.3 Head-to-head: full features vs top-10
+
+```{python}
+#| label: full-vs-top10
+def _delta(full: pd.DataFrame, top: pd.DataFrame, model: str) -> dict:
+    return {
+        "Sharpe (full)":  full.loc[model, "sharpe"],
+        "Sharpe (top10)": top.loc[model, "sharpe"],
+        "Δ Sharpe":       top.loc[model, "sharpe"] - full.loc[model, "sharpe"],
+        "Total ret (full)":  full.loc[model, "total_return"],
+        "Total ret (top10)": top.loc[model, "total_return"],
+    }
+
+rows = []
+for t in TICKERS:
+    for model in ["MLP", "LSTM"]:
+        row = {"ticker": t, "model": model,
+               **_delta(metrics_all[t], metrics_top10[t], model)}
+        rows.append(row)
+pd.DataFrame(rows).set_index(["ticker", "model"]).round(3)
+```
+
+### 6.4 Interpretation — why our result diverges from the paper
+
+The table makes the contrast unambiguous: **on this dataset and with
+this validation protocol, the full feature set wins for every
+ticker/model combination on a Sharpe basis.** The drop is dramatic on
+the cases where the full-feature model genuinely had an edge:
+
+- **EUFN** (LSTM): Sharpe collapses from **1.55 → −0.17**; the
+  ~29× total return becomes a small loss.
+- **FEZ** (LSTM): Sharpe drops from **1.67 → 0.20** and the strategy
+  no longer beats buy-and-hold.
+- **EUFN** (MLP): Sharpe drops from 0.94 → 0.44 but the model still
+  beats buy-and-hold.
+- **IEUR** and **IVV**: both models were already losing to
+  buy-and-hold on the full set, and they continue to do so under the
+  reduced set (slightly worse).
+
+This is the *opposite* sign to the paper's headline finding. A few
+mechanical reasons our setup is unlikely to reproduce a ~2 pp
+accuracy gain from aggressive feature pruning:
+
+1. **Different validation protocol.** The paper uses **10-fold
+   shuffled `StratifiedKFold`** (an i.i.d. assumption), which lets
+   the MLP see future-dated rows during training. We use a strict
+   **expanding-window walk-forward**, so every test row is genuinely
+   out-of-sample. Shuffled CV scores on price series are well-known
+   to be optimistically biased — and feature subsets that look good
+   under shuffled CV often lose their edge under temporal validation.
+2. **Different feature pool.** The paper has 216 Pandas TA columns;
+   our pipeline produces ~260 (different Pandas TA version, plus the
+   SMC family that dominates the importance ranking). The "top of
+   the importance list" is therefore a different set of signals.
+3. **Different downstream task on the LSTM.** The paper's
+   feature-selection result was reported for the MLP only. Our LSTM
+   regresses next-day price, and a 10-feature LSTM has noticeably
+   less to chew on per timestep — collapsing the model's ability to
+   identify price dynamics. The LSTM is where we see the largest
+   Sharpe loss when features are stripped.
+4. **Different dataset window.** The paper deliberately ends in
+   2020-01 to exclude the COVID period; our backtest covers
+   2012-2026 including the 2020 shock, the 2022 rate cycle, and
+   2023-25 recovery — regimes where the wider feature set has more
+   distinct signals to lean on.
+
+The practical lesson is that **for our walk-forward backtest, the
+extra ~250 features are *not* redundant** — they materially help the
+model handle regime shifts. Reducing to a handful of features only
+makes sense if (a) we can re-tune model capacity and (b) we accept a
+much smoother but lower-Sharpe equity curve. A middle-ground
+experiment (e.g. top 30–60 features, possibly with category quotas
+matching the paper's Selected(5) distribution) is the natural next
+step.
+
+---
+
+## 7. Reproducing the results
 
 ```bash
-# from the project root
+# from the project root — full feature baseline
 PYTHONPATH=src python scripts/run_modeling.py
 # or simply
 make modeling
+
+# top-10 features per ticker (suffix keeps the baseline files intact)
+PYTHONPATH=src python scripts/run_modeling.py \
+    --top-k-features 10 --feature-suffix _top10
 ```
 
 Useful CLI flags:
@@ -357,18 +505,18 @@ PYTHONPATH=src python scripts/run_modeling.py \
     --tickers FEZ --mlp-epochs 50 --lstm-epochs 30 --lstm-seq-len 30
 ```
 
-Each run regenerates:
+Each run regenerates (with optional `<suffix>` from `--feature-suffix`):
 
-- `reports/figures/equity_<TICKER>.png`
-- `reports/figures/fold_accuracy_<TICKER>.png`
-- `reports/results/<TICKER>_walkforward_metrics.csv`
-- `reports/results/<TICKER>_<model>_folds.csv`
-- `reports/results/<TICKER>_<model>_predictions.csv`
-- `reports/results/<TICKER>_equity_curves.csv`
+- `reports/figures/equity_<TICKER><suffix>.png`
+- `reports/figures/fold_accuracy_<TICKER><suffix>.png`
+- `reports/results/<TICKER>_walkforward_metrics<suffix>.csv`
+- `reports/results/<TICKER>_<model>_folds<suffix>.csv`
+- `reports/results/<TICKER>_<model>_predictions<suffix>.csv`
+- `reports/results/<TICKER>_equity_curves<suffix>.csv`
 
 ---
 
-## 7. Limitations & next steps
+## 8. Limitations & next steps
 
 - **Transaction costs and slippage are not modeled.** With a daily
   ±1 signal that frequently flips, real-world fills and the
@@ -385,7 +533,7 @@ Each run regenerates:
 
 ---
 
-## 8. References
+## 9. References
 
 Sagaceta-Mejía, A. R., Sánchez-Gutiérrez, M. E., & Fresán-Figueroa, J. A.
 (2024). An intelligent approach for predicting stock market movements in

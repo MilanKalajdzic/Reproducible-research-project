@@ -74,7 +74,58 @@ def parse_args() -> argparse.Namespace:
         "--tickers", nargs="+", default=None,
         help="Subset of tickers to run (defaults to all processed).",
     )
+    p.add_argument(
+        "--top-k-features", type=int, default=None,
+        help=(
+            "If set, train on only the top-K features from "
+            "reports/results/<TICKER>_feature_importance.csv "
+            "(plus the Gamma target). Mirrors the Selected(n) "
+            "approach from Sagaceta-Mejía et al. (2024)."
+        ),
+    )
+    p.add_argument(
+        "--feature-suffix", type=str, default="",
+        help=(
+            "Suffix appended to every output filename (e.g. '_top10'). "
+            "Use this when running with --top-k-features so the full-"
+            "feature baseline outputs are not overwritten."
+        ),
+    )
     return p.parse_args()
+
+
+def load_top_k_features(ticker: str, k: int) -> list[str]:
+    """Return the top-K feature names from the per-ticker importance CSV."""
+    path = RESULTS_DIR / f"{ticker}_feature_importance.csv"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Feature-importance file not found for {ticker}: {path}. "
+            "Run the statistical analysis (`make analysis`) first."
+        )
+    imp = pd.read_csv(path)
+    if "feature" not in imp.columns:
+        raise KeyError(
+            f"{path} must have a 'feature' column; got {list(imp.columns)}."
+        )
+    return imp["feature"].head(k).tolist()
+
+
+def select_features(
+    df: pd.DataFrame, ticker: str, top_k: int, target_col: str = "Gamma",
+) -> pd.DataFrame:
+    """Slice *df* to the top-K importance features plus the target column."""
+    top_features = load_top_k_features(ticker, top_k)
+    missing = [f for f in top_features if f not in df.columns]
+    if missing:
+        raise KeyError(
+            f"{ticker}: top-K features not in processed frame: {missing}"
+        )
+    cols = top_features + [target_col]
+    logger.info(
+        "[%s] training on top-%d features: %s",
+        ticker, top_k, top_features,
+    )
+    return df[cols].copy()
 
 
 def load_processed_or_run_pipeline(
@@ -135,6 +186,15 @@ def run_one(ticker: str, df: pd.DataFrame, args: argparse.Namespace) -> None:
     df.index = pd.to_datetime(df.index)
     close_unscaled = load_unscaled_close(ticker, df.index)
 
+    if args.top_k_features is not None:
+        df = select_features(df, ticker, args.top_k_features)
+
+    suffix = args.feature_suffix
+    title_extra = (
+        f" — top-{args.top_k_features} features"
+        if args.top_k_features is not None else ""
+    )
+
     validator = WalkForwardValidator(
         initial_train_size=args.initial_train,
         test_size=args.test_size,
@@ -159,26 +219,33 @@ def run_one(ticker: str, df: pd.DataFrame, args: argparse.Namespace) -> None:
 
     logger.info("[%s] summary metrics:\n%s", ticker, metrics.round(4).to_string())
 
-    metrics.to_csv(RESULTS_DIR / f"{ticker}_walkforward_metrics.csv")
+    metrics.to_csv(RESULTS_DIR / f"{ticker}_walkforward_metrics{suffix}.csv")
     mlp_result.fold_metrics.to_csv(
-        RESULTS_DIR / f"{ticker}_MLP_folds.csv", index=False,
+        RESULTS_DIR / f"{ticker}_MLP_folds{suffix}.csv", index=False,
     )
     lstm_result.fold_metrics.to_csv(
-        RESULTS_DIR / f"{ticker}_LSTM_folds.csv", index=False,
+        RESULTS_DIR / f"{ticker}_LSTM_folds{suffix}.csv", index=False,
     )
-    mlp_result.predictions.to_csv(RESULTS_DIR / f"{ticker}_MLP_predictions.csv")
-    lstm_result.predictions.to_csv(RESULTS_DIR / f"{ticker}_LSTM_predictions.csv")
-    curves.to_csv(RESULTS_DIR / f"{ticker}_equity_curves.csv")
+    mlp_result.predictions.to_csv(
+        RESULTS_DIR / f"{ticker}_MLP_predictions{suffix}.csv",
+    )
+    lstm_result.predictions.to_csv(
+        RESULTS_DIR / f"{ticker}_LSTM_predictions{suffix}.csv",
+    )
+    curves.to_csv(RESULTS_DIR / f"{ticker}_equity_curves{suffix}.csv")
 
     plot_equity_curves(
         curves,
-        title=f"{ticker} — walk-forward equity (MLP vs LSTM vs Buy & Hold)",
-        out_path=FIGURES_DIR / f"equity_{ticker}.png",
+        title=(
+            f"{ticker}{title_extra} — walk-forward equity "
+            "(MLP vs LSTM vs Buy & Hold)"
+        ),
+        out_path=FIGURES_DIR / f"equity_{ticker}{suffix}.png",
     )
     plot_fold_metric(
         {"MLP": mlp_result.fold_metrics, "LSTM": lstm_result.fold_metrics},
         metric="accuracy",
-        out_path=FIGURES_DIR / f"fold_accuracy_{ticker}.png",
+        out_path=FIGURES_DIR / f"fold_accuracy_{ticker}{suffix}.png",
     )
 
 
