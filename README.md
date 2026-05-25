@@ -9,10 +9,11 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 
 ## Quick Start (Docker — recommended)
 
-**One-shot reproduction.** Pull the image, then run it with the local
-`reports/` directory mounted. The container runs the full pipeline
-(data → analysis → modeling) and renders all three Quarto reports;
-the HTML files land back on the host in `./reports/`.
+**One-shot reproduction (fast — ~30 s after pull).** The image ships
+with all pre-computed CSVs, figures, and processed parquet files
+baked in. The default `CMD` (`make render`) just re-renders the three
+Quarto reports from those artefacts — no Yahoo Finance download, no
+model training. Pull once, then:
 
     # macOS / Linux / WSL
     docker pull milankalajdzic/etf-predictor:latest
@@ -26,8 +27,7 @@ the HTML files land back on the host in `./reports/`.
         -v "${PWD}/reports:/app/reports" `
         milankalajdzic/etf-predictor:latest
 
-When it finishes (allow ~10 minutes for the walk-forward training),
-open any of:
+When it finishes (typically under a minute), open any of:
 
 - `reports/eda_report.html`
 - `reports/statistical_analysis.html`
@@ -35,6 +35,14 @@ open any of:
 
 All three HTML files are self-contained (`embed-resources: true`) — no
 companion `_files/` directory is needed.
+
+**Full pipeline rebuild (~10 min).** To regenerate every CSV and
+retrain both networks before rendering, override the default command:
+
+    docker run --rm \
+        -v "$PWD/reports:/app/reports" \
+        milankalajdzic/etf-predictor:latest \
+        make report
 
 ### Build locally instead of pulling
 

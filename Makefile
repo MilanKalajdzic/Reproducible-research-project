@@ -111,7 +111,7 @@ docker-test:
 
 
 .PHONY: help install install-dev lint format test coverage \
-        data eda analysis modeling report docs clean clean-data \
+        data eda analysis modeling report render docs clean clean-data \
         docker-build docker-run docker-test
 
 
@@ -120,6 +120,17 @@ report:
 	$(RUNPY) -m etf_predictor.data.pipeline
 	$(RUNPY) scripts/run_analysis.py
 	$(RUNPY) scripts/run_modeling.py
+	quarto render reports/eda_report.qmd
+	quarto render reports/statistical_analysis.qmd
+	quarto render reports/modeling_report.qmd
+	@echo "Reports ready in reports/*.html"
+
+# ── Render only ──────────────────────────────────────────────────────────────
+# Re-renders the three Quarto reports from the pre-computed CSVs + figures
+# already on disk (no Yahoo download, no statistical analysis, no model
+# training). Use this for fast class demos when the image already ships
+# the data/ and reports/results/ artefacts. Total runtime: ~30 s.
+render:
 	quarto render reports/eda_report.qmd
 	quarto render reports/statistical_analysis.qmd
 	quarto render reports/modeling_report.qmd
