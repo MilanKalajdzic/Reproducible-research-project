@@ -111,11 +111,14 @@ docker-test:
 
 
 .PHONY: help install install-dev lint format test coverage \
-        data eda analysis modeling report render docs clean clean-data \
+        data eda analysis modeling report render publish docs clean clean-data \
         docker-build docker-run docker-test
 
 
 # ── Full report ──────────────────────────────────────────────────────────────
+# Runs the full pipeline (data → analysis → modeling) then renders the
+# three Quarto reports and copies them to /output/ so they survive past
+# the container lifetime when /output/ is bind-mounted by the caller.
 report:
 	$(RUNPY) -m etf_predictor.data.pipeline
 	$(RUNPY) scripts/run_analysis.py
@@ -123,7 +126,7 @@ report:
 	quarto render reports/eda_report.qmd
 	quarto render reports/statistical_analysis.qmd
 	quarto render reports/modeling_report.qmd
-	@echo "Reports ready in reports/*.html"
+	@$(MAKE) --no-print-directory publish
 
 # ── Render only ──────────────────────────────────────────────────────────────
 # Re-renders the three Quarto reports from the pre-computed CSVs + figures
@@ -134,4 +137,17 @@ render:
 	quarto render reports/eda_report.qmd
 	quarto render reports/statistical_analysis.qmd
 	quarto render reports/modeling_report.qmd
-	@echo "Reports ready in reports/*.html"
+	@$(MAKE) --no-print-directory publish
+
+# ── Publish rendered HTMLs to /output ────────────────────────────────────────
+# Copies the three self-contained HTML files to /output/, which the caller
+# is expected to bind-mount (`docker run -v $PWD/output:/output ...`).
+# Safe to call when /output is not mounted — it just lands inside the
+# container's filesystem and is discarded when the container exits.
+publish:
+	@mkdir -p /output
+	@cp reports/eda_report.html              /output/ 2>/dev/null || true
+	@cp reports/statistical_analysis.html    /output/ 2>/dev/null || true
+	@cp reports/modeling_report.html         /output/ 2>/dev/null || true
+	@echo "Published HTML reports to /output/"
+	@ls -lh /output/*.html 2>/dev/null || true

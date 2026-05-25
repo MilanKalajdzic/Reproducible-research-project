@@ -69,7 +69,13 @@ LABEL maintainer="ETF Predictor Team" \
       version="1.0.0" \
       org.opencontainers.image.source="https://github.com/<your-handle>/etf-predictor"
 
+# /output/ is where the published HTML reports land. Bind-mount this
+# directory (`docker run -v $PWD/output:/output ...`) to retrieve the
+# rendered reports on the host.
+RUN mkdir -p /output
+
 # Default command: run the full pipeline end-to-end — download/process
-# data, statistical analysis, MLP + LSTM walk-forward training, then
-# render all three Quarto reports. Takes ~10 minutes on CPU.
+# data, statistical analysis, MLP + LSTM walk-forward training, render
+# all three Quarto reports, and publish them to /output/. Takes
+# ~10 minutes on CPU.
 CMD ["make", "report"]

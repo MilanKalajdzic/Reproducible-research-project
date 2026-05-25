@@ -7,51 +7,80 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 
 ---
 
-## Quick Start 
+## Quick Start
+
+**Prerequisite:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+installed and running. No local Python, no git clone — everything is
+inside the image.
 
 ### Step 1 — pull the image
 
     docker pull milankalajdzic/etf-predictor:latest
 
-### Step 2 — create a folder for the rendered reports
+First pull is ~2 GB (compressed). Allow 3–10 minutes on average wifi.
+Subsequent runs use the local cache and skip the download.
 
-The container writes the three HTML reports into `/app/reports/`
-inside itself. Mount a host folder there so they land on your machine.
+> **Apple Silicon Macs (M1/M2/M3/M4):** if the pull fails with
+> *"no matching manifest for linux/arm64"*, add
+> `--platform linux/amd64` to both the `pull` and `run` commands.
+> Docker Desktop will emulate via Rosetta (~25% slower).
 
-    mkdir -p reports          # macOS / Linux / WSL
-    # or  mkdir reports       # Windows PowerShell
+### Step 2 — create an empty folder for the rendered reports
+
+The container publishes the three HTML files to `/output/` inside
+itself. Mount any empty host folder there to retrieve them.
+
+    mkdir output          # works on macOS / Linux / WSL / PowerShell
 
 ### Step 3 — run the full pipeline
 
 The default `CMD` is `make report`, which runs the **entire pipeline
 from scratch**: download/process data → statistical analysis → MLP
-and LSTM walk-forward training → render all three Quarto reports.
+and LSTM walk-forward training → render all three Quarto reports
+→ copy them to `/output/`.
 
     # macOS / Linux / WSL
     docker run --rm \
-        -v "$PWD/reports:/app/reports" \
+        -v "$PWD/output:/output" \
         milankalajdzic/etf-predictor:latest
 
     # Windows PowerShell
     docker run --rm `
-        -v "${PWD}/reports:/app/reports" `
+        -v "${PWD}/output:/output" `
         milankalajdzic/etf-predictor:latest
 
-Expect **~10 minutes** of runtime  — 4 tickers × ~22 folds × MLP+LSTM, all
-on CPU
+Expect **~10 minutes** of runtime — 4 tickers × ~22 folds × MLP + LSTM,
+all on CPU. The container streams progress logs to stdout.
 
 ### Step 4 — open the reports
 
 When the container exits, three self-contained HTML files appear in
-your `reports/` folder:
+your `output/` folder:
 
-- `reports/eda_report.html` — data preparation & feature engineering
-- `reports/statistical_analysis.html` — variance / correlation / RF / ARIMA
-- `reports/modeling_report.html` — MLP + LSTM walk-forward backtest
+- `output/eda_report.html` — data preparation & feature engineering
+- `output/statistical_analysis.html` — variance / correlation / RF / ARIMA
+- `output/modeling_report.html` — MLP + LSTM walk-forward backtest
 
-Open any of them in a browser. Each file embeds all images, so no
-companion `_files/` directory is needed and the files can be moved
-or shared individually.
+Open any of them in a browser. Each file embeds all images, so the
+files are self-contained and can be moved or emailed individually.
+
+### Troubleshooting
+
+- **`docker: invalid reference format`** — you used `…` as a placeholder
+  instead of a real argument, or there is a trailing space after a `\`
+  line continuation. Copy the block verbatim.
+- **`no matching manifest for linux/arm64`** — see the Apple Silicon
+  note in Step 1.
+- **`ERROR: No valid input files passed to render`** — you mounted
+  `/app/reports/` instead of `/output/`. The mount masked the `.qmd`
+  source files inside the image. Use exactly `-v $PWD/output:/output`.
+- **`output/` folder is empty after the run** — make sure you ran the
+  command from a directory where `$PWD/output` is an actual host
+  folder (Step 2). If `$PWD` is your home directory but you ran
+  `mkdir output` somewhere else, the mount target is wrong.
+- **The image runs offline.** The parquet cache for 2010-01-01 →
+  2026-04-30 is baked into the image, so the pipeline does not call
+  Yahoo Finance during `make report`. No internet needed at run time.
 
 
 ---
@@ -62,7 +91,7 @@ or shared individually.
 
     docker compose build
     docker compose run --rm \
-        -v "$PWD/reports:/app/reports" \
+        -v "$PWD/output:/output" \
         etf-predictor
 
 ### Open a shell inside the container
@@ -75,8 +104,9 @@ or shared individually.
     make eda        # regenerate EDA figures only
     make analysis   # statistical analysis only
     make modeling   # MLP + LSTM walk-forward only
-    make report     # full pipeline + render all three reports
+    make report     # full pipeline + render all three reports + publish to /output
     make render     # *just* re-render Quarto reports from existing CSVs (fast)
+    make publish    # copy reports/*.html → /output
 
 ### Faster smoke test (~3 minutes)
 
@@ -84,7 +114,7 @@ Cap the walk-forward at 3 folds instead of ~22 to demo the workflow
 without waiting for full training:
 
     docker run --rm \
-        -v "$PWD/reports:/app/reports" \
+        -v "$PWD/output:/output" \
         milankalajdzic/etf-predictor:latest \
         bash -c "make data && make analysis && \
                  python scripts/run_modeling.py --max-folds 3 && \
