@@ -1,0 +1,393 @@
+---
+title: "ETF Trend Prediction — Modeling Report"
+subtitle: "MLP signal classifier and LSTM value regressor on ETFs"
+author: Max
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    theme: cosmo
+    fig-width: 10
+    fig-height: 5
+    embed-resources: true
+execute:
+  warning: false
+  echo: true
+jupyter: python3
+---
+
+## 1. Overview
+
+This report documents the modeling stage of the ETF trend-prediction
+project. Building on the preprocessing pipeline described in the
+[data preparation report](eda_report.qmd), we train two neural
+architectures end-to-end on each ETF and benchmark them against a
+passive **buy-and-hold** baseline:
+
+- **MLP signal model** — a small multilayer perceptron that predicts
+  the next-day trend direction Γ(t) ∈ {+1, −1} as a binary
+  classification target.
+- **LSTM value model** — a recurrent network that regresses next-day
+  `Close` from a 20-day look-back window of features; the predicted
+  return is converted to a ±1 trading signal at inference time.
+
+Both models are evaluated with an **expanding-window walk-forward
+validator** so every test fold is strictly out-of-sample. Per-fold
+metrics, daily signals, and equity curves are persisted for every
+ticker.
+
+| Ticker | Fund | Region / sector |
+|--------|------|-----------------|
+| **EUFN** | iShares MSCI Europe Financials ETF | European financials |
+| **FEZ**  | SPDR EURO STOXX 50 ETF | Eurozone large-cap |
+| **IEUR** | iShares Core MSCI Europe ETF | Broad European market |
+| **IVV**  | iShares Core S&P 500 ETF | US benchmark |
+
+---
+
+## 2. The two models
+
+### 2.1 MLP signal model — `MLPSignalModel`
+
+The MLP treats trend prediction as **direct binary classification**:
+given the scaled indicator vector for day *t*, predict whether
+Γ(t) = +1 (up) or Γ(t) = −1 (down).
+
+Architecture ([src/etf_predictor/models/mlp_signal.py](../src/etf_predictor/models/mlp_signal.py)):
+
+```
+Input (n_features) → Linear(128) → ReLU → Dropout(0.2)
+                  → Linear(64)  → ReLU → Dropout(0.2)
+                  → Linear(1)   → Sigmoid
+```
+
+Training details:
+
+- **Loss:** `BCEWithLogitsLoss` after mapping {−1, +1} → {0, 1}.
+- **Optimiser:** Adam, lr = 1e-3, weight_decay = 1e-5.
+- **Batch size:** 64, **epochs:** 30, seeded with `random_state=42`.
+- **Inference:** P(Γ = +1) ≥ 0.5 → signal = +1, otherwise −1.
+
+The network is intentionally small so that it can be re-trained from
+scratch on every fold inside the walk-forward loop without a GPU.
+
+### 2.2 LSTM value model — `LSTMValueModel`
+
+The LSTM is trained as a **regressor on the next-day closing price**,
+not as a classifier. This more closely mirrors the design choice in
+Sagaceta-Mejía et al. (2024) where the recurrent network learns the
+price dynamics directly and a trading signal is derived from the
+implied return.
+
+Architecture ([src/etf_predictor/models/lstm_value.py](../src/etf_predictor/models/lstm_value.py)):
+
+```
+Input (batch, seq_len=20, n_features) → LSTM(hidden=64, layers=1)
+                                       → take last timestep
+                                       → Dropout(0.1) → Linear(1)
+```
+
+Training details:
+
+- **Target:** scaled next-day `Close` (min-max scaled on the training
+  fold; min/max stored so predictions can be back-transformed).
+- **Loss:** `MSELoss` in the scaled price space.
+- **Optimiser:** Adam, lr = 1e-3, weight_decay = 1e-5.
+- **Batch size:** 64, **epochs:** 20, **sequence length:** 20 trading
+  days, seeded with `random_state=42`.
+
+Signal derivation at inference:
+
+$$
+\hat{r}_t = \frac{\hat{\text{Close}}_{t+1} - \text{Close}_t}{\text{Close}_t},
+\quad
+\text{signal}_t = \begin{cases} +1 & \hat{r}_t > 0 \\ -1 & \text{otherwise} \end{cases}
+$$
+
+To predict for the very first row of a test fold, the validator passes
+the **tail of the training set** (the most recent `sequence_length`
+rows) as `history`, ensuring that no test-fold prediction is wasted on
+the warm-up window.
+
+### 2.3 Why two architectures?
+
+- The MLP captures **point-in-time pattern recognition** across the
+  ~260 indicators built in the preprocessing stage.
+- The LSTM captures **temporal dependence** across the trailing
+  20-day window of those same indicators and is anchored to the real
+  price target rather than the noisy ±1 label.
+
+Both models emit the same ±1 signal schema, so they plug into the same
+walk-forward harness and the same equity-curve evaluator.
+
+---
+
+## 3. Walk-forward validation
+
+The validator ([src/etf_predictor/models/walk_forward.py](../src/etf_predictor/models/walk_forward.py))
+implements an **expanding-window** scheme:
+
+- **Initial train window:** 750 rows (≈3 years of trading days).
+- **Test window:** 120 rows (≈6 months) per fold.
+- After each fold the test slice is appended to the training pool and
+  the model is **re-fit from scratch** on the expanded history.
+
+```
+fold 1:  train = [0 : 750]            test = [750 : 870]
+fold 2:  train = [0 : 870]            test = [870 : 990]
+fold k:  train = [0 : 750+(k-1)·120]  test = [750+(k-1)·120 : 750+k·120]
+```
+
+For each fold the validator records:
+
+- `signal` ∈ {+1, −1},
+- `actual_return` = next-day simple return on unscaled `Close`,
+- `strategy_return` = `signal * actual_return`,
+- and per-fold metrics: directional accuracy, hit rate, mean return,
+  annualised Sharpe.
+
+This means **every test prediction is strictly out-of-sample**: at the
+moment the model predicts day *t*, it has only seen days `< t`.
+
+### 3.1 Why expanding (not sliding)?
+
+An expanding window lets each successive model benefit from the full
+history while still respecting causality. For financial time series
+this trades slightly older training context for a larger, more diverse
+training set as the backtest progresses — which we judged to be the
+right trade-off for these mid-frequency directional signals.
+
+---
+
+## 4. Equity-curve construction
+
+After all folds finish, the per-day strategy returns are compounded
+([src/etf_predictor/models/equity.py](../src/etf_predictor/models/equity.py)):
+
+$$
+\text{Equity}_t = \prod_{s \le t} (1 + r_s^{\text{strategy}})
+$$
+
+starting at 1.0. The **buy-and-hold** baseline tracks
+`Close_t / Close_0` on the same test index.
+
+Summary statistics computed for every model and the baseline:
+
+- `total_return`, `annual_return`, `annual_vol`
+- `sharpe = annual_return / annual_vol`
+- `max_drawdown` (peak-to-trough)
+- `hit_rate` (fraction of positive return days)
+- `n_days` (number of test days actually traded)
+
+---
+
+## 5. Results per ETF
+
+```{python}
+#| label: load-metrics
+import pandas as pd
+from pathlib import Path
+
+RESULTS = Path("results")
+TICKERS = ["EUFN", "FEZ", "IEUR", "IVV"]
+
+metrics_all = {
+    t: pd.read_csv(RESULTS / f"{t}_walkforward_metrics.csv", index_col=0)
+    for t in TICKERS
+}
+```
+
+### 5.0 Results gallery — equity curves across all tickers
+
+A 2×2 view of every walk-forward equity curve. EUFN and FEZ are where
+both networks decisively beat the passive baseline; IEUR and IVV are
+where the buy-and-hold line dominates.
+
+::: {layout-ncol=2}
+![EUFN — equity curves](figures/equity_EUFN.png)
+
+![FEZ — equity curves](figures/equity_FEZ.png)
+
+![IEUR — equity curves](figures/equity_IEUR.png)
+
+![IVV — equity curves](figures/equity_IVV.png)
+:::
+
+And the matching per-fold directional-accuracy bars:
+
+::: {layout-ncol=2}
+![EUFN — per-fold accuracy](figures/fold_accuracy_EUFN.png)
+
+![FEZ — per-fold accuracy](figures/fold_accuracy_FEZ.png)
+
+![IEUR — per-fold accuracy](figures/fold_accuracy_IEUR.png)
+
+![IVV — per-fold accuracy](figures/fold_accuracy_IVV.png)
+:::
+
+### 5.1 EUFN — iShares MSCI Europe Financials
+
+```{python}
+metrics_all["EUFN"].round(4)
+```
+
+::: {layout-ncol=2}
+![EUFN — walk-forward equity curves (MLP vs LSTM vs Buy & Hold)](figures/equity_EUFN.png)
+
+![EUFN — per-fold directional accuracy](figures/fold_accuracy_EUFN.png)
+:::
+
+EUFN is the most favourable backdrop for the LSTM: the financials
+sector exhibits persistent trend behaviour that the regressor latches
+onto. The LSTM compounds to **~29×** the starting equity with a
+**Sharpe of 1.55**, far above buy-and-hold (~0.6× and Sharpe 0.19).
+The MLP also clears buy-and-hold (~7.8× total, Sharpe 0.94) but pays
+for it with a deeper intra-period drawdown profile during 2020.
+
+### 5.2 FEZ — SPDR EURO STOXX 50
+
+```{python}
+metrics_all["FEZ"].round(4)
+```
+
+::: {layout-ncol=2}
+![FEZ — walk-forward equity curves (MLP vs LSTM vs Buy & Hold)](figures/equity_FEZ.png)
+
+![FEZ — per-fold directional accuracy](figures/fold_accuracy_FEZ.png)
+:::
+
+FEZ shows the **largest gap between the two architectures**: the LSTM
+delivers a Sharpe of **1.67** and ~26× total return, while the MLP
+loses money over the full out-of-sample window (negative total return,
+negative Sharpe). The MLP's per-fold accuracy barely clears 50% and
+several folds in 2021–2024 drag the strategy into a sustained
+drawdown, while the LSTM's price-anchored signal stays directionally
+correct on the larger swings.
+
+### 5.3 IEUR — iShares Core MSCI Europe
+
+```{python}
+metrics_all["IEUR"].round(4)
+```
+
+::: {layout-ncol=2}
+![IEUR — walk-forward equity curves (MLP vs LSTM vs Buy & Hold)](figures/equity_IEUR.png)
+
+![IEUR — per-fold directional accuracy](figures/fold_accuracy_IEUR.png)
+:::
+
+IEUR is the **hardest case for both models**. Its data only begins in
+mid-2014, so only 13 folds are available (vs 22–23 for the other
+tickers) and the models have less history to learn from. Both networks
+trail buy-and-hold on Sharpe (0.15 / 0.01 vs 0.33) and several folds
+in 2022–2024 produce sub-50% directional accuracy. This is the
+clearest example that the two networks need a long, stable training
+history to outperform.
+
+### 5.4 IVV — iShares Core S&P 500 (US benchmark)
+
+```{python}
+metrics_all["IVV"].round(4)
+```
+
+::: {layout-ncol=2}
+![IVV — walk-forward equity curves (MLP vs LSTM vs Buy & Hold)](figures/equity_IVV.png)
+
+![IVV — per-fold directional accuracy](figures/fold_accuracy_IVV.png)
+:::
+
+IVV is the **adversarial case**: a strong, persistent secular uptrend
+where buy-and-hold is extremely hard to beat. The benchmark compounds
+to ~3.4× with a Sharpe of 0.66, while both ML strategies underperform
+— the MLP turns slightly negative and the LSTM ekes out a marginal
+positive return. The directional-accuracy bars hover around 0.45–0.50
+on most folds, confirming that on a trending US large-cap index a ±1
+signal that occasionally goes short is structurally disadvantaged
+relative to staying long.
+
+### 5.5 Cross-ticker summary
+
+```{python}
+#| label: summary-table
+summary = pd.concat(
+    {t: m[["total_return", "annual_return", "sharpe", "max_drawdown", "hit_rate"]]
+     for t, m in metrics_all.items()},
+    names=["ticker"],
+).round(4)
+summary
+```
+
+Key takeaways from the table:
+
+- **LSTM wins on Sharpe in 3 of 4 tickers** (EUFN, FEZ, IVV vs MLP),
+  driven by the price-anchored target and the temporal context window.
+- **Both models beat buy-and-hold on the two European
+  sector/large-cap ETFs** (EUFN, FEZ) but lose to it on the broad
+  IEUR and the trending IVV.
+- **Drawdowns are model-dependent**: the LSTM occasionally accepts
+  larger drawdowns (EUFN −35%) in exchange for higher upside, while
+  the MLP tends to keep drawdowns slightly smaller but at the cost of
+  much lower returns.
+- **Hit rates cluster around 48–53%** across the board — i.e., the
+  signals are only marginally better than coin-flips on a per-day
+  basis, but the magnitude of correctly-called moves drives the
+  Sharpe advantage where it appears.
+
+---
+
+## 6. Reproducing the results
+
+```bash
+# from the project root
+PYTHONPATH=src python scripts/run_modeling.py
+# or simply
+make modeling
+```
+
+Useful CLI flags:
+
+```bash
+# Smoke test — 3 folds only
+PYTHONPATH=src python scripts/run_modeling.py --max-folds 3
+
+# Train a single ticker with custom epochs / look-back
+PYTHONPATH=src python scripts/run_modeling.py \
+    --tickers FEZ --mlp-epochs 50 --lstm-epochs 30 --lstm-seq-len 30
+```
+
+Each run regenerates:
+
+- `reports/figures/equity_<TICKER>.png`
+- `reports/figures/fold_accuracy_<TICKER>.png`
+- `reports/results/<TICKER>_walkforward_metrics.csv`
+- `reports/results/<TICKER>_<model>_folds.csv`
+- `reports/results/<TICKER>_<model>_predictions.csv`
+- `reports/results/<TICKER>_equity_curves.csv`
+
+---
+
+## 7. Limitations & next steps
+
+- **Transaction costs and slippage are not modeled.** With a daily
+  ±1 signal that frequently flips, real-world fills and the
+  bid/ask spread would erode a meaningful slice of the reported
+  Sharpe — most aggressively on the LSTM's higher-turnover folds.
+- **Position sizing is binary.** A confidence-weighted sizing scheme
+  (e.g. scaling by predicted probability or predicted return
+  magnitude) would likely smooth the equity curves and improve
+  risk-adjusted returns.
+- **No hyper-parameter search.** Architecture sizes, epoch counts,
+  dropout, and sequence length are fixed at sensible defaults. A
+  walk-forward-aware tuning loop (e.g. nested CV on the training
+  block) would be the natural next step.
+
+---
+
+## 8. References
+
+Sagaceta-Mejía, A. R., Sánchez-Gutiérrez, M. E., & Fresán-Figueroa, J. A.
+(2024). An intelligent approach for predicting stock market movements in
+emerging markets using optimized technical indicators and neural networks.
+*Economics*, 18, 20220073. https://doi.org/10.1515/econ-2022-0073
