@@ -1,16 +1,9 @@
 """
 lstm_value.py
 -------------
-LSTM regressor that predicts the next-day ``Close`` price from a fixed
-look-back window of indicator features.
+LSTM regressor that predicts the next-day Close price from a fixed 
+window of past features, then converts the predicted price into signal
 
-Trading signal derivation
-~~~~~~~~~~~~~~~~~~~~~~~~~
-The model regresses next-day ``Close``. Each prediction is compared with
-today's observed ``Close``; if the predicted return is positive the
-signal is +1 (long), otherwise -1 (short). This keeps the output schema
-identical to ``MLPSignalModel`` so both models plug into the same
-walk-forward harness.
 """
 
 from __future__ import annotations
@@ -304,10 +297,6 @@ class LSTMValueModel:
         ret = (pred - current_close) / current_close
         signal = np.where(ret.fillna(0.0) > 0, 1, -1).astype(np.int8)
         return signal
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
 
     def _make_sequences(
         self, features: np.ndarray, target_scaled: np.ndarray,

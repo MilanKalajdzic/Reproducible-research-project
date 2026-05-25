@@ -1,15 +1,5 @@
 """
-equity.py
----------
-Equity-curve construction and visualisation for walk-forward backtests.
-
-Given the per-day strategy returns produced by ``WalkForwardValidator``,
-this module:
-
-- compounds them into an equity curve starting at 1.0,
-- builds a buy-and-hold baseline from the raw price series,
-- computes summary risk/return metrics,
-- plots all model curves on a single figure for visual comparison.
+Equity-curve construction and visualisation for walk-forward backtests
 """
 
 from __future__ import annotations
@@ -30,15 +20,14 @@ TRADING_DAYS = 252
 
 
 def equity_curve(strategy_returns: pd.Series) -> pd.Series:
-    """Compound a return series into a 1.0-anchored equity curve.
+    """
+    Compound a return series into equity curve.
 
     Parameters
-    ----------
     strategy_returns : pd.Series
         Daily simple returns. NaNs are treated as 0 (no position effect).
 
     Returns
-    -------
     pd.Series
         Equity values; index preserved.
     """
@@ -47,12 +36,9 @@ def equity_curve(strategy_returns: pd.Series) -> pd.Series:
 
 
 def buy_and_hold_curve(
-    close_unscaled: pd.Series, index: pd.Index,
-) -> pd.Series:
-    """Buy-and-hold equity curve aligned with *index*.
-
-    Starts at 1.0 on the first date in *index* and tracks
-    ``Close_t / Close_0``.
+    close_unscaled: pd.Series, index: pd.Index) -> pd.Series:
+    """
+    Buy-and-hold equity curve aligned with *index*.
     """
     close = close_unscaled.reindex(index).ffill()
     return close / close.iloc[0]
@@ -97,14 +83,12 @@ def build_comparison(
     """Build aligned equity curves and a metrics table for several models.
 
     Parameters
-    ----------
     results : iterable of WalkForwardResult
         Each model's walk-forward output.
     close_unscaled : pd.Series
         Unscaled close price used to construct the buy-and-hold baseline.
 
     Returns
-    -------
     (curves, metrics) : tuple of pd.DataFrame
         ``curves`` is indexed by date, one column per model plus
         ``"BuyAndHold"``. ``metrics`` has one row per model and the
@@ -150,7 +134,6 @@ def plot_equity_curves(
     """Plot model equity curves on a single axes.
 
     Parameters
-    ----------
     curves : pd.DataFrame
         Output of :func:`build_comparison`.
     title : str
@@ -160,8 +143,7 @@ def plot_equity_curves(
     figsize : tuple
         Matplotlib figure size.
 
-    Returns
-    -------
+    Return
     matplotlib.figure.Figure
         The created figure (also displayed if ``out_path`` is ``None``).
     """
