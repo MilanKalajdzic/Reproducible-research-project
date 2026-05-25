@@ -43,31 +43,31 @@ RUN pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.2"
 
 RUN pip install ".[dev,notebook]"
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 3: final image
 # ─────────────────────────────────────────────────────────────────────────────
 FROM deps AS final
 
-# Copy source code
+# Source and config
 COPY src/ ./src/
 COPY tests/ ./tests/
 COPY notebooks/ ./notebooks/
-COPY reports/ ./reports/
 COPY scripts/ ./scripts/
 COPY docs/ ./docs/
 COPY Makefile ./
 COPY .pre-commit-config.yaml ./
 
-# Create data directories that will be populated at runtime
-# (raw data is downloaded, not baked into the image)
-RUN mkdir -p data/raw data/processed reports/figures
+# Reports — qmd sources + pre-computed CSVs and figures (no .html)
+COPY reports/ ./reports/
 
-# Default command: run the full pipeline then drop into bash
-CMD ["python", "-m", "etf_predictor.data.pipeline"]
+# Pre-baked pipeline artifacts so `make report` only re-renders Quarto
+COPY data/ ./data/
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Labels
-# ─────────────────────────────────────────────────────────────────────────────
 LABEL maintainer="ETF Predictor Team" \
-      description="ETF trend prediction — data preparation" \
-      version="0.1.0"
+      description="ETF trend prediction —  render-only demo" \
+      version="1.0.0" \
+      org.opencontainers.image.source="https://github.com/<your-handle>/etf-predictor"
+
+# Default command: render all three reports
+CMD ["make", "report"]

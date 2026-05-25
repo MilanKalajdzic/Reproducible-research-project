@@ -106,3 +106,21 @@ docker-run:
 
 docker-test:
 	docker compose run --rm test
+
+
+
+
+.PHONY: help install install-dev lint format test coverage \
+        data eda analysis modeling report docs clean clean-data \
+        docker-build docker-run docker-test
+
+
+# ── Full report ──────────────────────────────────────────────────────────────
+report:
+	$(RUNPY) -m etf_predictor.data.pipeline
+	$(RUNPY) scripts/run_analysis.py
+	$(RUNPY) scripts/run_modeling.py
+	quarto render reports/eda_report.qmd
+	quarto render reports/statistical_analysis.qmd
+	quarto render reports/modeling_report.qmd
+	@echo "Reports ready in reports/*.html"

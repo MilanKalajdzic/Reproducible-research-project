@@ -42,3 +42,10 @@ docs/_build/
 .pytest_cache/
 .coverage
 htmlcov/
+
+
+# Rendered Quarto output 
+reports/*.html
+reports/eda_report_files/
+reports/statistical_analysis_files/
+reports/modeling_report_files/

@@ -36,7 +36,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="statistical_analysis_files/libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="statistical_analysis_files/libs/bootstrap/bootstrap.min.js"></script>
 <link href="statistical_analysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="statistical_analysis_files/libs/bootstrap/bootstrap-138a6193a3bd40baf1e627da441a4734.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="statistical_analysis_files/libs/bootstrap/bootstrap-bc8768c804c95525f40d69fda3082915.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
 
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
@@ -104,7 +104,7 @@ window.Quarto = {
 </section>
 <section id="summary-table" class="level2">
 <h2 class="anchored" data-anchor-id="summary-table">Summary Table</h2>
-<div id="f6b8e3f1" class="cell" data-execution_count="2">
+<div id="3aff9dd9" class="cell" data-execution_count="2">
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div>
 
@@ -130,7 +130,7 @@ window.Quarto = {
 <td>IEUR</td>
 <td>263</td>
 <td>4148</td>
-<td>0.713693</td>
+<td>0.721992</td>
 <td>0.533250</td>
 <td>0.466750</td>
 <td>0.709114</td>
@@ -142,7 +142,7 @@ window.Quarto = {
 <td>FEZ</td>
 <td>266</td>
 <td>4321</td>
-<td>0.753191</td>
+<td>0.760284</td>
 <td>0.523701</td>
 <td>0.476299</td>
 <td>0.770300</td>
@@ -154,7 +154,7 @@ window.Quarto = {
 <td>EUFN</td>
 <td>265</td>
 <td>4264</td>
-<td>0.758916</td>
+<td>0.756063</td>
 <td>0.517133</td>
 <td>0.482867</td>
 <td>0.886637</td>
@@ -166,7 +166,7 @@ window.Quarto = {
 <td>IVV</td>
 <td>263</td>
 <td>5090</td>
-<td>0.717730</td>
+<td>0.721986</td>
 <td>0.556628</td>
 <td>0.443372</td>
 <td>0.996885</td>
@@ -188,7 +188,7 @@ window.Quarto = {
 <section id="correlation-redundancy" class="level2">
 <h2 class="anchored" data-anchor-id="correlation-redundancy">Correlation Redundancy</h2>
 <p>A major finding of the analysis is the very high redundancy in the feature space. For each ETF, we counted the number of feature pairs with absolute correlation above 0.95. The totals are very large, indicating that many technical indicators contain nearly identical information.</p>
-<div id="bc8a5975" class="cell" data-execution_count="3">
+<div id="b9d0ce3d" class="cell" data-execution_count="3">
 <div class="cell-output cell-output-display" data-execution_count="3">
 <div>
 
@@ -233,7 +233,7 @@ window.Quarto = {
 <section id="feature-importance" class="level2">
 <h2 class="anchored" data-anchor-id="feature-importance">Feature Importance</h2>
 <p>To assess predictive usefulness, we fitted a Random Forest classifier for each ETF and extracted feature-importance scores. The most important indicators are relatively consistent across ETFs, especially the <code>SMC*</code> family, along with indicators such as <code>CRSI_3_2_100</code>, <code>BBP_5_2.0_2.0</code>, <code>THERMO_20_2_0.5</code>, <code>CFO_9</code>, <code>BOP</code>, and short-horizon return features.</p>
-<div id="49a07a03" class="cell" data-execution_count="4">
+<div id="9253719d" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display" data-execution_count="4">
 <div>
 
@@ -252,121 +252,121 @@ window.Quarto = {
 <th data-quarto-table-cell-role="th">0</th>
 <td>IEUR</td>
 <td>SMCti_14_50_20_5</td>
-<td>0.038852</td>
+<td>0.038922</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">1</th>
 <td>IEUR</td>
 <td>SMCbi_14_50_20_5</td>
-<td>0.037969</td>
+<td>0.038519</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">2</th>
 <td>IEUR</td>
-<td>SMCbp_14_50_20_5</td>
-<td>0.035409</td>
+<td>SMCtp_14_50_20_5</td>
+<td>0.034773</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">3</th>
 <td>IEUR</td>
-<td>SMCtp_14_50_20_5</td>
-<td>0.034344</td>
+<td>SMCbp_14_50_20_5</td>
+<td>0.034754</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">4</th>
 <td>IEUR</td>
 <td>CRSI_3_2_100</td>
-<td>0.029580</td>
+<td>0.029295</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">5</th>
 <td>FEZ</td>
 <td>SMCbi_14_50_20_5</td>
-<td>0.045216</td>
+<td>0.044613</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">6</th>
 <td>FEZ</td>
 <td>SMCtp_14_50_20_5</td>
-<td>0.038937</td>
+<td>0.037908</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">7</th>
 <td>FEZ</td>
 <td>SMCbp_14_50_20_5</td>
-<td>0.034382</td>
+<td>0.035543</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">8</th>
 <td>FEZ</td>
 <td>SMCti_14_50_20_5</td>
-<td>0.032389</td>
+<td>0.032988</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">9</th>
 <td>FEZ</td>
 <td>CRSI_3_2_100</td>
-<td>0.027912</td>
+<td>0.028246</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">10</th>
 <td>EUFN</td>
 <td>SMCtp_14_50_20_5</td>
-<td>0.044217</td>
+<td>0.044851</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">11</th>
 <td>EUFN</td>
 <td>SMCbi_14_50_20_5</td>
-<td>0.042411</td>
+<td>0.042291</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">12</th>
 <td>EUFN</td>
 <td>SMCbp_14_50_20_5</td>
-<td>0.042216</td>
+<td>0.041907</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">13</th>
 <td>EUFN</td>
-<td>SMCti_14_50_20_5</td>
-<td>0.033190</td>
+<td>BBP_5_2.0_2.0</td>
+<td>0.033310</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">14</th>
 <td>EUFN</td>
-<td>BBP_5_2.0_2.0</td>
-<td>0.032663</td>
+<td>SMCti_14_50_20_5</td>
+<td>0.032867</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">15</th>
 <td>IVV</td>
 <td>SMCbi_14_50_20_5</td>
-<td>0.057594</td>
+<td>0.057913</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">16</th>
 <td>IVV</td>
 <td>SMCbp_14_50_20_5</td>
-<td>0.049682</td>
+<td>0.048387</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">17</th>
 <td>IVV</td>
 <td>SMCtp_14_50_20_5</td>
-<td>0.046068</td>
+<td>0.045594</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">18</th>
 <td>IVV</td>
 <td>SMCti_14_50_20_5</td>
-<td>0.041505</td>
+<td>0.042255</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">19</th>
 <td>IVV</td>
 <td>BOP</td>
-<td>0.025917</td>
+<td>0.027093</td>
 </tr>
 </tbody>
 </table>
@@ -379,7 +379,7 @@ window.Quarto = {
 <section id="time-series-diagnostics-and-arima-baseline" class="level2">
 <h2 class="anchored" data-anchor-id="time-series-diagnostics-and-arima-baseline">Time-Series Diagnostics and ARIMA Baseline</h2>
 <p>As a univariate time-series benchmark, we applied an ADF stationarity test and an ARIMA(1,1,1) model to the <code>Close</code> price series for each ETF.</p>
-<div id="3e76a69a" class="cell" data-execution_count="5">
+<div id="789f3e13" class="cell" data-execution_count="5">
 <div class="cell-output cell-output-display" data-execution_count="5">
 <div>
 

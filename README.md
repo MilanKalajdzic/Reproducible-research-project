@@ -9,31 +9,59 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 
 ## Quick Start (Docker — recommended)
 
-    # 1. Pull the image from DockerHub
+**One-shot reproduction.** Pull the image, then run it with the local
+`reports/` directory mounted. The container runs the full pipeline
+(data → analysis → modeling) and renders all three Quarto reports;
+the HTML files land back on the host in `./reports/`.
+
+    # macOS / Linux / WSL
     docker pull milankalajdzic/etf-predictor:latest
+    docker run --rm \
+        -v "$PWD/reports:/app/reports" \
+        milankalajdzic/etf-predictor:latest
 
-    # 2. Or build locally
+    # Windows PowerShell
+    docker pull milankalajdzic/etf-predictor:latest
+    docker run --rm `
+        -v "${PWD}/reports:/app/reports" `
+        milankalajdzic/etf-predictor:latest
+
+When it finishes (allow ~10 minutes for the walk-forward training),
+open any of:
+
+- `reports/eda_report.html`
+- `reports/statistical_analysis.html`
+- `reports/modeling_report.html`
+
+All three HTML files are self-contained (`embed-resources: true`) — no
+companion `_files/` directory is needed.
+
+### Build locally instead of pulling
+
     docker compose build
+    docker compose run --rm \
+        -v "$PWD/reports:/app/reports" \
+        etf-predictor make report
 
-    # 3. Open a shell inside the container
+### Open a shell inside the container
+
     docker compose run --rm etf-predictor bash
 
-    # 4. Inside the container — run everything in order:
+    # then, inside the container:
     make data       # download and process ETF data
     make test       # run 34 unit tests
-    make eda        # generate EDA figures to reports/figures/
-    make analysis   # run statistical analysis
-    make docs       # build Sphinx HTML docs to docs/_build/html/
+    make eda        # regenerate EDA figures only
+    make analysis   # statistical analysis only
+    make modeling   # MLP + LSTM walk-forward only
+    make report     # full pipeline + render all three reports
 
-    # 5. Render the Quarto report (inside container)
-    quarto render reports/eda_report.qmd
-    quarto render reports/statistical_analysis.qmd
+### Note on data
 
-    # 6. Copy rendered report out to your local machine (from PowerShell)
-    docker cp <container_name>:/app/reports/eda_report.html reports/eda_report.html
-
-    # 7. Copy built docs out to your local machine (from PowerShell)
-    docker cp <container_name>:/app/docs/_build/html docs/_build/html
+The image bakes `data/raw/` and `data/processed/` parquet files
+captured on 2026-04-30, so `make report` runs fully offline and
+reproduces the exact numbers in the rendered HTML. If you want to
+refresh against today's Yahoo Finance feed, run `make clean-data &&
+make data` inside the container.
 
 ---
 
@@ -170,20 +198,33 @@ The corresponding Quarto report can be rendered with:
 | `make modeling` | Train MLP + LSTM with walk-forward validation and equity plots |
 ---
 
-## Rendering the Report
+## Rendering the Reports
 
-The Quarto report must be rendered inside the Docker container where all
-dependencies are available:
+Three Quarto reports live under `reports/`:
 
-    # inside the container
+| Report | Source | Description |
+|--------|--------|-------------|
+| EDA | `reports/eda_report.qmd` | Data preparation, indicator construction, class balance |
+| Statistical analysis | `reports/statistical_analysis.qmd` | Variance / correlation / ADF / Random Forest importance / ARIMA |
+| Modeling | `reports/modeling_report.qmd` | MLP + LSTM walk-forward backtest, equity curves, top-10 feature ablation |
+
+Render them all in one go (inside the container):
+
+    make report
+
+or one at a time:
+
     quarto render reports/eda_report.qmd
     quarto render reports/statistical_analysis.qmd
+    quarto render reports/modeling_report.qmd
 
-    # copy the HTML output to your local machine (from PowerShell)
-    docker cp <container_name>:/app/reports/eda_report.html reports/eda_report.html
-    docker cp <container_name>:/app/reports/eda_report_files reports/eda_report_files
+If `reports/` is bind-mounted with `-v "$PWD/reports:/app/reports"`,
+the rendered HTML appears on the host automatically. Otherwise
+copy it out:
 
-Then open `reports/eda_report.html` or `reports/statistical_analysis.html` in your browser.
+    docker cp <container_name>:/app/reports/modeling_report.html reports/modeling_report.html
+
+
 
 ---
 
@@ -211,12 +252,7 @@ Then open docs/_build/html/index.html in your browser.
 
 ---
 
-## Requirements
 
-- Docker Desktop (no local Python installation needed)
-- All dependencies are pinned in pyproject.toml and baked into the image
-
----
 
 ## References
 
