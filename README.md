@@ -7,49 +7,63 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 
 ---
 
-## Quick Start (Docker — recommended)
+## Quick Start 
 
-**One-shot reproduction.** The image ships
-with all pre-computed CSVs, figures, and processed parquet files
-baked in. The default `CMD` (`make render`) just re-renders the three
-Quarto reports from those artefacts — no Yahoo Finance download, no
-model training. Pull once, then:
+### Step 1 — pull the image
+
+    docker pull milankalajdzic/etf-predictor:latest
+
+### Step 2 — create a folder for the rendered reports
+
+The container writes the three HTML reports into `/app/reports/`
+inside itself. Mount a host folder there so they land on your machine.
+
+    mkdir -p reports          # macOS / Linux / WSL
+    # or  mkdir reports       # Windows PowerShell
+
+### Step 3 — run the full pipeline
+
+The default `CMD` is `make report`, which runs the **entire pipeline
+from scratch**: download/process data → statistical analysis → MLP
+and LSTM walk-forward training → render all three Quarto reports.
 
     # macOS / Linux / WSL
-    docker pull milankalajdzic/etf-predictor:latest
     docker run --rm \
         -v "$PWD/reports:/app/reports" \
         milankalajdzic/etf-predictor:latest
 
     # Windows PowerShell
-    docker pull milankalajdzic/etf-predictor:latest
     docker run --rm `
         -v "${PWD}/reports:/app/reports" `
         milankalajdzic/etf-predictor:latest
 
-When it finishes (typically under a minute), open any of:
+Expect **~10 minutes** of runtime  — 4 tickers × ~22 folds × MLP+LSTM, all
+on CPU
 
-- `reports/eda_report.html`
-- `reports/statistical_analysis.html`
-- `reports/modeling_report.html`
+### Step 4 — open the reports
 
-All three HTML files are self-contained (`embed-resources: true`) — no
-companion `_files/` directory is needed.
+When the container exits, three self-contained HTML files appear in
+your `reports/` folder:
 
-**Full pipeline rebuild (~10 min).** To regenerate every CSV and
-retrain both networks before rendering, override the default command:
+- `reports/eda_report.html` — data preparation & feature engineering
+- `reports/statistical_analysis.html` — variance / correlation / RF / ARIMA
+- `reports/modeling_report.html` — MLP + LSTM walk-forward backtest
 
-    docker run --rm \
-        -v "$PWD/reports:/app/reports" \
-        milankalajdzic/etf-predictor:latest \
-        make report
+Open any of them in a browser. Each file embeds all images, so no
+companion `_files/` directory is needed and the files can be moved
+or shared individually.
+
+
+---
+
+## Power-user options
 
 ### Build locally instead of pulling
 
     docker compose build
     docker compose run --rm \
         -v "$PWD/reports:/app/reports" \
-        etf-predictor make report
+        etf-predictor
 
 ### Open a shell inside the container
 
@@ -62,14 +76,19 @@ retrain both networks before rendering, override the default command:
     make analysis   # statistical analysis only
     make modeling   # MLP + LSTM walk-forward only
     make report     # full pipeline + render all three reports
+    make render     # *just* re-render Quarto reports from existing CSVs (fast)
 
-### Note on data
+### Faster smoke test (~3 minutes)
 
-The image bakes `data/raw/` and `data/processed/` parquet files
-captured on 2026-04-30, so `make report` runs fully offline and
-reproduces the exact numbers in the rendered HTML. If you want to
-refresh against today's Yahoo Finance feed, run `make clean-data &&
-make data` inside the container.
+Cap the walk-forward at 3 folds instead of ~22 to demo the workflow
+without waiting for full training:
+
+    docker run --rm \
+        -v "$PWD/reports:/app/reports" \
+        milankalajdzic/etf-predictor:latest \
+        bash -c "make data && make analysis && \
+                 python scripts/run_modeling.py --max-folds 3 && \
+                 make render"
 
 ---
 

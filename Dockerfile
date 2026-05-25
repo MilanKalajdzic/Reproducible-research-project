@@ -69,7 +69,7 @@ LABEL maintainer="ETF Predictor Team" \
       version="1.0.0" \
       org.opencontainers.image.source="https://github.com/<your-handle>/etf-predictor"
 
-# Default command: render the three Quarto reports from the pre-computed
-# CSVs + figures baked into the image. Fast path (~30 s, no training).
-# Override with `make report` to re-run the full pipeline (~10 min).
-CMD ["make", "render"]
+# Default command: run the full pipeline end-to-end — download/process
+# data, statistical analysis, MLP + LSTM walk-forward training, then
+# render all three Quarto reports. Takes ~10 minutes on CPU.
+CMD ["make", "report"]
