@@ -20,9 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
-    && curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb \
-    && dpkg -i quarto-linux-amd64.deb \
-    && rm quarto-linux-amd64.deb \
+    && ARCH="$(dpkg --print-architecture)" \
+    && curl -LO "https://quarto.org/download/latest/quarto-linux-${ARCH}.deb" \
+    && dpkg -i "quarto-linux-${ARCH}.deb" \
+    && rm "quarto-linux-${ARCH}.deb" \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install jupyter
@@ -34,6 +35,11 @@ FROM base AS deps
 
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
+
+# Install CPU-only torch first from the PyTorch CPU wheel index so the
+# image stays small (no CUDA libs). The .[dev,notebook] install below
+# then sees torch already satisfied and skips the GPU wheel.
+RUN pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.2"
 
 RUN pip install ".[dev,notebook]"
 

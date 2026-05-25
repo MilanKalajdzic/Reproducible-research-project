@@ -167,6 +167,7 @@ The corresponding Quarto report can be rendered with:
 | `make docker-run` | Run pipeline in Docker |
 | `make docker-test` | Run tests in Docker |
 | `make analysis` | Run statistical analysis pipeline |
+| `make modeling` | Train MLP + LSTM with walk-forward validation and equity plots |
 ---
 
 ## Rendering the Report

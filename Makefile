@@ -13,7 +13,7 @@ DOCS_BUILD := docs/_build/html
 IMAGE_NAME := etf-predictor
 
 .PHONY: help install install-dev lint format test coverage \
-        data eda analysis docs clean clean-data docker-build docker-run docker-test
+        data eda analysis modeling docs clean clean-data docker-build docker-run docker-test
 
 # ── Default target ───────────────────────────────────────────────────────────
 help:
@@ -29,6 +29,7 @@ help:
 	@echo "  data          Download & process all ETF data"
 	@echo "  eda           Generate all EDA figures to reports/figures/"
 	@echo "  analysis      Run statistical analysis pipeline"
+	@echo "  modeling      Train MLP + LSTM with walk-forward validation"
 	@echo "  docs          Build Sphinx HTML documentation"
 	@echo "  clean         Remove build/cache/data artefacts"
 	@echo "  clean-data    Remove raw and processed data"
@@ -75,6 +76,10 @@ eda:
 # ── Statistical analysis ─────────────────────────────────────────────────────
 analysis:
 	$(RUNPY) scripts/run_analysis.py
+
+# ── Modeling (MLP + LSTM + walk-forward backtest) ────────────────────────────
+modeling:
+	$(RUNPY) scripts/run_modeling.py
 
 # ── Documentation ────────────────────────────────────────────────────────────
 docs:
