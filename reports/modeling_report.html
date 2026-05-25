@@ -132,6 +132,7 @@ window.Quarto = {
   <li><a href="#equity-curve-construction" id="toc-equity-curve-construction" class="nav-link" data-scroll-target="#equity-curve-construction">4. Equity-curve construction</a></li>
   <li><a href="#results-per-etf" id="toc-results-per-etf" class="nav-link" data-scroll-target="#results-per-etf">5. Results per ETF</a>
   <ul class="collapse">
+  <li><a href="#results-gallery-equity-curves-across-all-tickers" id="toc-results-gallery-equity-curves-across-all-tickers" class="nav-link" data-scroll-target="#results-gallery-equity-curves-across-all-tickers">5.0 Results gallery — equity curves across all tickers</a></li>
   <li><a href="#eufn-ishares-msci-europe-financials" id="toc-eufn-ishares-msci-europe-financials" class="nav-link" data-scroll-target="#eufn-ishares-msci-europe-financials">5.1 EUFN — iShares MSCI Europe Financials</a></li>
   <li><a href="#fez-spdr-euro-stoxx-50" id="toc-fez-spdr-euro-stoxx-50" class="nav-link" data-scroll-target="#fez-spdr-euro-stoxx-50">5.2 FEZ — SPDR EURO STOXX 50</a></li>
   <li><a href="#ieur-ishares-core-msci-europe" id="toc-ieur-ishares-core-msci-europe" class="nav-link" data-scroll-target="#ieur-ishares-core-msci-europe">5.3 IEUR — iShares Core MSCI Europe</a></li>
@@ -328,9 +329,90 @@ fold k:  train = [0 : 750+(k-1)·120]  test = [750+(k-1)·120 : 750+k·120]</cod
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
+<section id="results-gallery-equity-curves-across-all-tickers" class="level3">
+<h3 class="anchored" data-anchor-id="results-gallery-equity-curves-across-all-tickers">5.0 Results gallery — equity curves across all tickers</h3>
+<p>A 2×2 view of every walk-forward equity curve. EUFN and FEZ are where both networks decisively beat the passive baseline; IEUR and IVV are where the buy-and-hold line dominates.</p>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/equity_EUFN.png" class="img-fluid figure-img"></p>
+<figcaption>EUFN — equity curves</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/equity_FEZ.png" class="img-fluid figure-img"></p>
+<figcaption>FEZ — equity curves</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/equity_IEUR.png" class="img-fluid figure-img"></p>
+<figcaption>IEUR — equity curves</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/equity_IVV.png" class="img-fluid figure-img"></p>
+<figcaption>IVV — equity curves</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<p>And the matching per-fold directional-accuracy bars:</p>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fold_accuracy_EUFN.png" class="img-fluid figure-img"></p>
+<figcaption>EUFN — per-fold accuracy</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fold_accuracy_FEZ.png" class="img-fluid figure-img"></p>
+<figcaption>FEZ — per-fold accuracy</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fold_accuracy_IEUR.png" class="img-fluid figure-img"></p>
+<figcaption>IEUR — per-fold accuracy</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fold_accuracy_IVV.png" class="img-fluid figure-img"></p>
+<figcaption>IVV — per-fold accuracy</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
 <section id="eufn-ishares-msci-europe-financials" class="level3">
 <h3 class="anchored" data-anchor-id="eufn-ishares-msci-europe-financials">5.1 EUFN — iShares MSCI Europe Financials</h3>
-<div id="da54f78f" class="cell" data-execution_count="2">
+<div id="1abfc706" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>metrics_all[<span class="st">"EUFN"</span>].<span class="bu">round</span>(<span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -399,23 +481,31 @@ fold k:  train = [0 : 750+(k-1)·120]  test = [750+(k-1)·120 : 750+k·120]</cod
 </div>
 </div>
 </div>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="figures/equity_EUFN.png" class="img-fluid figure-img"></p>
 <figcaption>EUFN — walk-forward equity curves (MLP vs LSTM vs Buy &amp; Hold)</figcaption>
 </figure>
 </div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="figures/fold_accuracy_EUFN.png" class="img-fluid figure-img"></p>
 <figcaption>EUFN — per-fold directional accuracy</figcaption>
 </figure>
 </div>
+</div>
+</div>
+</div>
 <p>EUFN is the most favourable backdrop for the LSTM: the financials sector exhibits persistent trend behaviour that the regressor latches onto. The LSTM compounds to <strong>~29×</strong> the starting equity with a <strong>Sharpe of 1.55</strong>, far above buy-and-hold (~0.6× and Sharpe 0.19). The MLP also clears buy-and-hold (~7.8× total, Sharpe 0.94) but pays for it with a deeper intra-period drawdown profile during 2020.</p>
 </section>
 <section id="fez-spdr-euro-stoxx-50" class="level3">
 <h3 class="anchored" data-anchor-id="fez-spdr-euro-stoxx-50">5.2 FEZ — SPDR EURO STOXX 50</h3>
-<div id="c4a9af75" class="cell" data-execution_count="3">
+<div id="3335c63c" class="cell" data-execution_count="3">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>metrics_all[<span class="st">"FEZ"</span>].<span class="bu">round</span>(<span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -484,23 +574,31 @@ fold k:  train = [0 : 750+(k-1)·120]  test = [750+(k-1)·120 : 750+k·120]</cod
 </div>
 </div>
 </div>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="figures/equity_FEZ.png" class="img-fluid figure-img"></p>
 <figcaption>FEZ — walk-forward equity curves (MLP vs LSTM vs Buy &amp; Hold)</figcaption>
 </figure>
 </div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="figures/fold_accuracy_FEZ.png" class="img-fluid figure-img"></p>
 <figcaption>FEZ — per-fold directional accuracy</figcaption>
 </figure>
 </div>
+</div>
+</div>
+</div>
 <p>FEZ shows the <strong>largest gap between the two architectures</strong>: the LSTM delivers a Sharpe of <strong>1.67</strong> and ~26× total return, while the MLP loses money over the full out-of-sample window (negative total return, negative Sharpe). The MLP’s per-fold accuracy barely clears 50% and several folds in 2021–2024 drag the strategy into a sustained drawdown, while the LSTM’s price-anchored signal stays directionally correct on the larger swings.</p>
 </section>
 <section id="ieur-ishares-core-msci-europe" class="level3">
 <h3 class="anchored" data-anchor-id="ieur-ishares-core-msci-europe">5.3 IEUR — iShares Core MSCI Europe</h3>
-<div id="aaa4aa57" class="cell" data-execution_count="4">
+<div id="fe02de2c" class="cell" data-execution_count="4">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>metrics_all[<span class="st">"IEUR"</span>].<span class="bu">round</span>(<span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -569,23 +667,31 @@ fold k:  train = [0 : 750+(k-1)·120]  test = [750+(k-1)·120 : 750+k·120]</cod
 </div>
 </div>
 </div>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="figures/equity_IEUR.png" class="img-fluid figure-img"></p>
 <figcaption>IEUR — walk-forward equity curves (MLP vs LSTM vs Buy &amp; Hold)</figcaption>
 </figure>
 </div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="figures/fold_accuracy_IEUR.png" class="img-fluid figure-img"></p>
 <figcaption>IEUR — per-fold directional accuracy</figcaption>
 </figure>
 </div>
+</div>
+</div>
+</div>
 <p>IEUR is the <strong>hardest case for both models</strong>. Its data only begins in mid-2014, so only 13 folds are available (vs 22–23 for the other tickers) and the models have less history to learn from. Both networks trail buy-and-hold on Sharpe (0.15 / 0.01 vs 0.33) and several folds in 2022–2024 produce sub-50% directional accuracy. This is the clearest example that the two networks need a long, stable training history to outperform.</p>
 </section>
 <section id="ivv-ishares-core-sp-500-us-benchmark" class="level3">
 <h3 class="anchored" data-anchor-id="ivv-ishares-core-sp-500-us-benchmark">5.4 IVV — iShares Core S&amp;P 500 (US benchmark)</h3>
-<div id="04b3eb07" class="cell" data-execution_count="5">
+<div id="717f9c26" class="cell" data-execution_count="5">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>metrics_all[<span class="st">"IVV"</span>].<span class="bu">round</span>(<span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -654,17 +760,25 @@ fold k:  train = [0 : 750+(k-1)·120]  test = [750+(k-1)·120 : 750+k·120]</cod
 </div>
 </div>
 </div>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="figures/equity_IVV.png" class="img-fluid figure-img"></p>
 <figcaption>IVV — walk-forward equity curves (MLP vs LSTM vs Buy &amp; Hold)</figcaption>
 </figure>
 </div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="figures/fold_accuracy_IVV.png" class="img-fluid figure-img"></p>
 <figcaption>IVV — per-fold directional accuracy</figcaption>
 </figure>
+</div>
+</div>
+</div>
 </div>
 <p>IVV is the <strong>adversarial case</strong>: a strong, persistent secular uptrend where buy-and-hold is extremely hard to beat. The benchmark compounds to ~3.4× with a Sharpe of 0.66, while both ML strategies underperform — the MLP turns slightly negative and the LSTM ekes out a marginal positive return. The directional-accuracy bars hover around 0.45–0.50 on most folds, confirming that on a trending US large-cap index a ±1 signal that occasionally goes short is structurally disadvantaged relative to staying long.</p>
 </section>

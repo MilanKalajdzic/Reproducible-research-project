@@ -198,15 +198,45 @@ metrics_all = {
 }
 ```
 
+### 5.0 Results gallery — equity curves across all tickers
+
+A 2×2 view of every walk-forward equity curve. EUFN and FEZ are where
+both networks decisively beat the passive baseline; IEUR and IVV are
+where the buy-and-hold line dominates.
+
+::: {layout-ncol=2}
+![EUFN — equity curves](figures/equity_EUFN.png)
+
+![FEZ — equity curves](figures/equity_FEZ.png)
+
+![IEUR — equity curves](figures/equity_IEUR.png)
+
+![IVV — equity curves](figures/equity_IVV.png)
+:::
+
+And the matching per-fold directional-accuracy bars:
+
+::: {layout-ncol=2}
+![EUFN — per-fold accuracy](figures/fold_accuracy_EUFN.png)
+
+![FEZ — per-fold accuracy](figures/fold_accuracy_FEZ.png)
+
+![IEUR — per-fold accuracy](figures/fold_accuracy_IEUR.png)
+
+![IVV — per-fold accuracy](figures/fold_accuracy_IVV.png)
+:::
+
 ### 5.1 EUFN — iShares MSCI Europe Financials
 
 ```{python}
 metrics_all["EUFN"].round(4)
 ```
 
+::: {layout-ncol=2}
 ![EUFN — walk-forward equity curves (MLP vs LSTM vs Buy & Hold)](figures/equity_EUFN.png)
 
 ![EUFN — per-fold directional accuracy](figures/fold_accuracy_EUFN.png)
+:::
 
 EUFN is the most favourable backdrop for the LSTM: the financials
 sector exhibits persistent trend behaviour that the regressor latches
@@ -221,9 +251,11 @@ for it with a deeper intra-period drawdown profile during 2020.
 metrics_all["FEZ"].round(4)
 ```
 
+::: {layout-ncol=2}
 ![FEZ — walk-forward equity curves (MLP vs LSTM vs Buy & Hold)](figures/equity_FEZ.png)
 
 ![FEZ — per-fold directional accuracy](figures/fold_accuracy_FEZ.png)
+:::
 
 FEZ shows the **largest gap between the two architectures**: the LSTM
 delivers a Sharpe of **1.67** and ~26× total return, while the MLP
@@ -239,9 +271,11 @@ correct on the larger swings.
 metrics_all["IEUR"].round(4)
 ```
 
+::: {layout-ncol=2}
 ![IEUR — walk-forward equity curves (MLP vs LSTM vs Buy & Hold)](figures/equity_IEUR.png)
 
 ![IEUR — per-fold directional accuracy](figures/fold_accuracy_IEUR.png)
+:::
 
 IEUR is the **hardest case for both models**. Its data only begins in
 mid-2014, so only 13 folds are available (vs 22–23 for the other
@@ -257,9 +291,11 @@ history to outperform.
 metrics_all["IVV"].round(4)
 ```
 
+::: {layout-ncol=2}
 ![IVV — walk-forward equity curves (MLP vs LSTM vs Buy & Hold)](figures/equity_IVV.png)
 
 ![IVV — per-fold directional accuracy](figures/fold_accuracy_IVV.png)
+:::
 
 IVV is the **adversarial case**: a strong, persistent secular uptrend
 where buy-and-hold is extremely hard to beat. The benchmark compounds
