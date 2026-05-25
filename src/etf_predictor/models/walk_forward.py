@@ -3,20 +3,11 @@ walk_forward.py
 ---------------
 Expanding-window walk-forward validation for the MLP and LSTM models.
 
-The window expands forward in time:
-
-    fold 1:  train = [0 : initial_train]                 test = [initial_train : initial_train + test_size]
-    fold 2:  train = [0 : initial_train + test_size]     test = [initial_train + test_size : initial_train + 2*test_size]
-    fold k:  train = [0 : initial_train + (k-1)*test_size]
-              test  = [initial_train + (k-1)*test_size : initial_train + k*test_size]
-
 Each fold:
     1. Re-fits the supplied model on the train slice.
     2. Predicts signals on the test slice.
     3. Computes the next-day strategy return  signal_t * actual_return_{t+1}.
 
-Predictions and per-day returns are concatenated across folds and
-returned together with a per-fold metrics frame.
 """
 
 from __future__ import annotations

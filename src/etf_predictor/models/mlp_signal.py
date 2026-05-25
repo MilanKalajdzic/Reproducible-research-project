@@ -1,11 +1,6 @@
 """
-mlp_signal.py
--------------
 Multilayer perceptron that predicts the trend-direction signal
 Γ(t) ∈ {+1, -1} directly as a binary classification task.
-
-The model is intentionally small (two hidden layers with dropout) so it
-can train quickly inside the walk-forward loop without a GPU.
 """
 
 from __future__ import annotations
@@ -23,8 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 class _MLPNet(nn.Module):
-    """Two-hidden-layer MLP with ReLU activations and dropout."""
-
     def __init__(
         self,
         n_features: int,
@@ -48,26 +41,17 @@ class _MLPNet(nn.Module):
 
 
 class MLPSignalModel:
-    """MLP classifier that predicts Γ(t) ∈ {+1, -1} from indicator features.
+    """MLP classifier that predicts Γ(t) from indicator features.
 
     Parameters
-    ----------
     hidden_sizes : tuple[int, int]
-        Sizes of the two hidden layers. Defaults to ``(128, 64)``.
     dropout : float
-        Dropout probability between hidden layers.
     learning_rate : float
-        Adam learning rate.
     epochs : int
-        Number of training epochs.
     batch_size : int
-        Mini-batch size.
     weight_decay : float
-        L2 regularisation for Adam.
     device : str or None
-        ``"cpu"``, ``"cuda"`` or ``None`` to auto-detect.
     random_state : int
-        Seed for reproducibility.
     """
 
     def __init__(
@@ -93,24 +77,17 @@ class MLPSignalModel:
         self._model: Optional[_MLPNet] = None
         self._feature_cols: Optional[list[str]] = None
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> "MLPSignalModel":
-        """Train the MLP on (X, y) where y ∈ {+1, -1}.
+        """
+        Train the MLP on (X, y)
 
         Parameters
-        ----------
         X : pd.DataFrame
-            Feature matrix (scaled).
         y : pd.Series
-            Trend-direction target with values in ``{+1, -1}``.
 
         Returns
-        -------
         MLPSignalModel
-            ``self`` for chaining.
         """
         torch.manual_seed(self.random_state)
         np.random.seed(self.random_state)
@@ -168,16 +145,15 @@ class MLPSignalModel:
         return probs
 
     def predict_signal(self, X: pd.DataFrame) -> np.ndarray:
-        """Return trading signal ∈ {+1, -1} for each row of *X*.
+        """
+        Return trading signal ∈ {+1, -1} for each row of *X*.
 
         +1 = long, -1 = short. Probabilities ≥ 0.5 map to +1.
         """
         probs = self.predict_proba(X)
         return np.where(probs >= 0.5, 1, -1).astype(np.int8)
 
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
+   
 
     def _check_fitted(self) -> None:
         if self._model is None:
