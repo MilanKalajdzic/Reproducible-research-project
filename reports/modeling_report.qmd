@@ -1,7 +1,7 @@
 ---
 title: "ETF Trend Prediction — Modeling Report"
-subtitle: "MLP signal classifier and LSTM value regressor on European ETFs"
-author: "TBD"
+subtitle: "MLP signal classifier and LSTM value regressor on ETFs"
+author: Max
 date: today
 format:
   html:
@@ -382,13 +382,6 @@ Each run regenerates:
   dropout, and sequence length are fixed at sensible defaults. A
   walk-forward-aware tuning loop (e.g. nested CV on the training
   block) would be the natural next step.
-- **Single seed.** Each fold is trained from a single seed; reporting
-  mean ± std across multiple seeds would tighten the conclusions,
-  particularly on the borderline tickers (IEUR, IVV).
-- **Feature set is shared across models.** The MLP could benefit from
-  feature selection (e.g. mutual-information filter on the training
-  fold), while the LSTM might prefer a smaller, less redundant input
-  vector.
 
 ---
 
