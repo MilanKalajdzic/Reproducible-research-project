@@ -9,7 +9,7 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 
 ## Quick Start (Docker — recommended)
 
-**One-shot reproduction (fast — ~30 s after pull).** The image ships
+**One-shot reproduction.** The image ships
 with all pre-computed CSVs, figures, and processed parquet files
 baked in. The default `CMD` (`make render`) just re-renders the three
 Quarto reports from those artefacts — no Yahoo Finance download, no

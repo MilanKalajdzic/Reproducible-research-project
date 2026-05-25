@@ -1,0 +1,4 @@
+jupyter>=1.0
+marimo>=0.3
+plotly>=5.17
+seaborn>=0.13

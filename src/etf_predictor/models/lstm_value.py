@@ -1,6 +1,5 @@
 """
-lstm_value.py
--------------
+
 LSTM regressor that predicts the next-day Close price from a fixed 
 window of past features, then converts the predicted price into signal
 
@@ -51,34 +50,20 @@ class _LSTMNet(nn.Module):
 
 
 class LSTMValueModel:
-    """LSTM regressor on next-day Close, converted to a ±1 trading signal.
-
+    """
     Parameters
     ----------
     sequence_length : int
-        Length of the look-back window fed to the LSTM.
     hidden_size : int
-        Number of LSTM hidden units.
     num_layers : int
-        Stacked LSTM layers.
     dropout : float
-        Dropout applied between layers and before the head.
     learning_rate : float
-        Adam learning rate.
     epochs : int
-        Number of training epochs.
     batch_size : int
-        Mini-batch size.
     weight_decay : float
-        L2 regularisation for Adam.
     price_col : str
-        Column in ``X`` (or attached via ``fit``) holding the unscaled
-        ``Close`` series used to (a) build the regression target and
-        (b) derive the trading signal at inference time.
     device : str or None
-        ``"cpu"``, ``"cuda"`` or ``None`` to auto-detect.
     random_state : int
-        Seed for reproducibility.
     """
 
     def __init__(
@@ -114,30 +99,19 @@ class LSTMValueModel:
         self._close_min: Optional[float] = None
         self._close_max: Optional[float] = None
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
 
     def fit(
         self,
         X: pd.DataFrame,
         close_unscaled: pd.Series,
     ) -> "LSTMValueModel":
-        """Train the LSTM to predict next-day Close.
-
+        """
         Parameters
         ----------
         X : pd.DataFrame
-            Scaled feature matrix indexed by date.
         close_unscaled : pd.Series
-            Unscaled ``Close`` series aligned with ``X.index``. Used to
-            build the regression target and to back-transform predictions
-            into price space.
-
         Returns
-        -------
         LSTMValueModel
-            ``self`` for chaining.
         """
         torch.manual_seed(self.random_state)
         np.random.seed(self.random_state)
@@ -212,25 +186,14 @@ class LSTMValueModel:
         X: pd.DataFrame,
         history: Optional[pd.DataFrame] = None,
     ) -> pd.Series:
-        """Predict next-day Close (unscaled) for each row of *X*.
-
-        Because the LSTM needs ``sequence_length`` prior rows of features
-        to make a prediction, callers should pass the *most recent*
-        training rows in ``history`` so that predictions can start from
-        the very first row of ``X``.
+        """
+        Predict next-day Close 
 
         Parameters
         ----------
         X : pd.DataFrame
-            Feature rows to predict for.
         history : pd.DataFrame or None
-            Optional feature rows immediately preceding ``X`` (typically
-            the tail of the training set). If provided, all rows in
-            ``X`` will receive a prediction. If ``None``, the first
-            ``sequence_length - 1`` predictions will be NaN.
-
         Returns
-        -------
         pd.Series
             Predicted next-day Close, indexed by ``X.index``.
         """
@@ -273,23 +236,17 @@ class LSTMValueModel:
         current_close: pd.Series,
         history: Optional[pd.DataFrame] = None,
     ) -> np.ndarray:
-        """Convert predicted-close into a ±1 trading signal.
+        """
+        Convert predicted-close into a ±1 trading signal.
 
         Parameters
-        ----------
         X : pd.DataFrame
-            Feature rows to predict for.
         current_close : pd.Series
-            Today's (unscaled) Close price, aligned with ``X.index``.
-            Used to compute the implied return.
         history : pd.DataFrame or None
-            See :meth:`predict_close`.
 
         Returns
-        -------
         np.ndarray
-            Signals in ``{+1, -1}``; NaN-prediction rows default to -1
-            so they do not contribute spurious long positions.
+            Signals in {+1, -1}, where +1 = long and -1 = short.
         """
         pred = self.predict_close(X, history=history)
         if not current_close.index.equals(X.index):
