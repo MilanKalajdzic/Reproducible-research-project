@@ -13,7 +13,7 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 
     docker pull milankalajdzic/etf-predictor:latest
 
-> **Apple Silicon Macs:** if the pull fails with add
+> **Macs:** if the pull fails with add
 > `--platform linux/amd64` to both the `pull` and `run` commands.
 > Docker Desktop will emulate linux envi.
 
