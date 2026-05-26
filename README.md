@@ -46,6 +46,8 @@ all on CPU.
 
 ### Step 4 — open the reports
 
+    open ./output/*.html
+
 When the container exits, three self-contained HTML files appear in
 your `output/` folder:
 
