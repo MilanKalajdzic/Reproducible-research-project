@@ -1,8 +1,6 @@
 ---
 title: "ETF Trend Prediction — Data Preparation Report"
 subtitle: "European ETFs: IEUR, FEZ, EUFN"
-author: Milan
-date: today
 format:
   html:
     toc: true

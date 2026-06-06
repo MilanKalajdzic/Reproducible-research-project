@@ -1,6 +1,8 @@
 ---
 title: "Statistical Diagnostics and Time-Series Baseline"
-format: html
+format: 
+  html:
+    self-contained: true
 execute:
   echo: false
   warning: false
