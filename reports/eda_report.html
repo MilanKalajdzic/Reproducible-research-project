@@ -6,8 +6,6 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="TBD">
-<meta name="dcterms.date" content="2026-05-22">
 
 <title>ETF Trend Prediction — Data Preparation Report</title>
 <style>
@@ -73,7 +71,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="eda_report_files/libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="eda_report_files/libs/bootstrap/bootstrap.min.js"></script>
 <link href="eda_report_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="eda_report_files/libs/bootstrap/bootstrap-975ed55ff2a98b685efe2e625b6eddae.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="eda_report_files/libs/bootstrap/bootstrap-8ffd5f67044e5306d9846f29df41dda5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
 
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
@@ -155,19 +153,7 @@ window.Quarto = {
 
 <div class="quarto-title-meta">
 
-    <div>
-    <div class="quarto-title-meta-heading">Author</div>
-    <div class="quarto-title-meta-contents">
-             <p>TBD </p>
-          </div>
-  </div>
     
-    <div>
-    <div class="quarto-title-meta-heading">Published</div>
-    <div class="quarto-title-meta-contents">
-      <p class="date">May 22, 2026</p>
-    </div>
-  </div>
   
     
   </div>
@@ -216,30 +202,33 @@ window.Quarto = {
 </section>
 <section id="setup" class="level2">
 <h2 class="anchored" data-anchor-id="setup">2. Setup</h2>
-<div id="138e66dd" class="cell" data-execution_count="1">
+<div id="de3f9f7a" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="st">"/app/src"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> logging</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>logging.basicConfig(level<span class="op">=</span>logging.WARNING)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>PROJECT_ROOT <span class="op">=</span> Path.cwd().parent</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(PROJECT_ROOT <span class="op">/</span> <span class="st">"src"</span>))</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> etf_predictor.data.loader <span class="im">import</span> YahooFinanceLoader</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> etf_predictor.data.pipeline <span class="im">import</span> DataPipeline</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> etf_predictor.data.visualization <span class="im">import</span> EDAVisualizer</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>TICKERS <span class="op">=</span> [<span class="st">"IEUR"</span>, <span class="st">"FEZ"</span>, <span class="st">"EUFN"</span>]</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>START   <span class="op">=</span> <span class="st">"2010-01-01"</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>END     <span class="op">=</span> <span class="st">"2026-05-01"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> logging</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>logging.basicConfig(level<span class="op">=</span>logging.WARNING)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> etf_predictor.data.loader <span class="im">import</span> YahooFinanceLoader</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> etf_predictor.data.pipeline <span class="im">import</span> DataPipeline</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> etf_predictor.data.visualization <span class="im">import</span> EDAVisualizer</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>TICKERS <span class="op">=</span> [<span class="st">"IEUR"</span>, <span class="st">"FEZ"</span>, <span class="st">"EUFN"</span>]</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>START   <span class="op">=</span> <span class="st">"2010-01-01"</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>END     <span class="op">=</span> <span class="st">"2026-05-01"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <hr>
 </section>
 <section id="raw-data" class="level2">
 <h2 class="anchored" data-anchor-id="raw-data">3. Raw Data</h2>
-<div id="4c6095cd" class="cell" data-execution_count="2">
+<div id="eb51f542" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>loader <span class="op">=</span> YahooFinanceLoader(tickers<span class="op">=</span>TICKERS, start<span class="op">=</span>START, end<span class="op">=</span>END)</span>
@@ -258,7 +247,7 @@ IVV: 4106 rows, 2010-01-04 → 2026-04-30</code></pre>
 <p>Note: IEUR only has data from 2014-06-12 — this is a Yahoo Finance data availability limitation, not a pipeline issue.</p>
 <section id="open-price-summary-statistics" class="level3">
 <h3 class="anchored" data-anchor-id="open-price-summary-statistics">3.1 Open Price Summary Statistics</h3>
-<div id="42341687" class="cell" data-execution_count="3">
+<div id="ea60d83e" class="cell" data-execution_count="3">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -340,7 +329,7 @@ IVV: 4106 rows, 2010-01-04 → 2026-04-30</code></pre>
 </section>
 <section id="normalised-open-price-over-time" class="level3">
 <h3 class="anchored" data-anchor-id="normalised-open-price-over-time">3.2 Normalised Open Price Over Time</h3>
-<div id="df148855" class="cell" data-execution_count="4">
+<div id="901125ee" class="cell" data-execution_count="4">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>viz <span class="op">=</span> EDAVisualizer()</span>
@@ -359,7 +348,7 @@ IVV: 4106 rows, 2010-01-04 → 2026-04-30</code></pre>
 </section>
 <section id="sector-exposure" class="level3">
 <h3 class="anchored" data-anchor-id="sector-exposure">3.3 Sector Exposure</h3>
-<div id="9278c06e" class="cell" data-execution_count="5">
+<div id="0b6a63ac" class="cell" data-execution_count="5">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> viz.plot_sector_exposure()</span>
@@ -368,7 +357,7 @@ IVV: 4106 rows, 2010-01-04 → 2026-04-30</code></pre>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="eda_report_files/figure-html/cell-6-output-1.png" width="1525" height="475" class="figure-img"></p>
+<p><img src="eda_report_files/figure-html/cell-6-output-1.png" width="1526" height="475" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -379,7 +368,7 @@ IVV: 4106 rows, 2010-01-04 → 2026-04-30</code></pre>
 </section>
 <section id="pipeline" class="level2">
 <h2 class="anchored" data-anchor-id="pipeline">4. Pipeline</h2>
-<div id="f59a64de" class="cell" data-execution_count="6">
+<div id="a1222a4f" class="cell" data-execution_count="6">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pipeline <span class="op">=</span> DataPipeline(</span>
@@ -505,7 +494,7 @@ IVV: 4106 rows, 2010-01-04 → 2026-04-30</code></pre>
 <h3 class="anchored" data-anchor-id="classification-target-γt">4.2 Classification Target Γ(t)</h3>
 <p>Following the paper (Section 2.4):</p>
 <p><span class="math display">\[\Gamma(t) = \begin{cases} +1 &amp; \text{if } \text{Open}(t) - \text{Open}(t-1) &gt; 0 \\ -1 &amp; \text{otherwise} \end{cases}\]</span></p>
-<div id="d6e00938" class="cell" data-execution_count="7">
+<div id="5b00fa15" class="cell" data-execution_count="7">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> viz.plot_cumulative_gamma(datasets)</span>
@@ -522,7 +511,7 @@ IVV: 4106 rows, 2010-01-04 → 2026-04-30</code></pre>
 </section>
 <section id="class-balance" class="level3">
 <h3 class="anchored" data-anchor-id="class-balance">4.3 Class Balance</h3>
-<div id="f885dd71" class="cell" data-execution_count="8">
+<div id="c46c3a26" class="cell" data-execution_count="8">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> viz.plot_class_balance(datasets)</span>
@@ -555,7 +544,7 @@ IVV: 4106 rows, 2010-01-04 → 2026-04-30</code></pre>
 <li><strong>Sparse column removal</strong> — columns with &gt;95% NaN (e.g.&nbsp;ZIGZAG indicator) are dropped entirely before row-level cleaning.</li>
 <li><strong>Forward-fill</strong> — remaining NaN values from indicator warm-up periods are forward-filled, then any residual NaN rows are dropped.</li>
 </ol>
-<div id="d3df969c" class="cell" data-execution_count="9">
+<div id="4688eac9" class="cell" data-execution_count="9">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ticker, df <span class="kw">in</span> datasets.items():</span>
@@ -574,7 +563,7 @@ IVV: 3523 rows remaining, 0 NaN values</code></pre>
 </section>
 <section id="feature-correlation-selected-indicators" class="level2">
 <h2 class="anchored" data-anchor-id="feature-correlation-selected-indicators">6. Feature Correlation (Selected Indicators)</h2>
-<div id="b95b1d3a" class="cell" data-execution_count="10">
+<div id="dc34f15f" class="cell" data-execution_count="10">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> viz.plot_correlation_heatmap(</span>
@@ -586,7 +575,7 @@ IVV: 3523 rows remaining, 0 NaN values</code></pre>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="eda_report_files/figure-html/cell-11-output-1.png" width="846" height="759" class="figure-img"></p>
+<p><img src="eda_report_files/figure-html/cell-11-output-1.png" width="839" height="758" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -603,7 +592,7 @@ IVV: 3523 rows remaining, 0 NaN values</code></pre>
 <li><strong>Scaler access:</strong> <code>pipeline._scalers[ticker]</code> — must be applied correctly inside cross-validation folds to avoid leakage</li>
 <li><strong>Note:</strong> IEUR has fewer rows (~2400) than FEZ/EUFN/IVV (~3500) due to data availability starting June 2014</li>
 </ul>
-<div id="d2b50b4c" class="cell" data-execution_count="11">
+<div id="9199ec34" class="cell" data-execution_count="11">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify handoff contract</span></span>
