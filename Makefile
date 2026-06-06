@@ -13,7 +13,7 @@ DOCS_BUILD := docs/_build/html
 IMAGE_NAME := etf-predictor
 
 .PHONY: help install install-dev lint format test coverage \
-        data eda analysis docs clean clean-data docker-build docker-run docker-test
+        data eda analysis modeling docs clean clean-data docker-build docker-run docker-test
 
 # ── Default target ───────────────────────────────────────────────────────────
 help:
@@ -29,6 +29,7 @@ help:
 	@echo "  data          Download & process all ETF data"
 	@echo "  eda           Generate all EDA figures to reports/figures/"
 	@echo "  analysis      Run statistical analysis pipeline"
+	@echo "  modeling      Train MLP + LSTM with walk-forward validation"
 	@echo "  docs          Build Sphinx HTML documentation"
 	@echo "  clean         Remove build/cache/data artefacts"
 	@echo "  clean-data    Remove raw and processed data"
@@ -76,6 +77,10 @@ eda:
 analysis:
 	$(RUNPY) scripts/run_analysis.py
 
+# ── Modeling (MLP + LSTM + walk-forward backtest) ────────────────────────────
+modeling:
+	$(RUNPY) scripts/run_modeling.py
+
 # ── Documentation ────────────────────────────────────────────────────────────
 docs:
 	sphinx-build -b html $(DOCS_SRC) $(DOCS_BUILD)
@@ -101,3 +106,48 @@ docker-run:
 
 docker-test:
 	docker compose run --rm test
+
+
+
+
+.PHONY: help install install-dev lint format test coverage \
+        data eda analysis modeling report render publish docs clean clean-data \
+        docker-build docker-run docker-test
+
+
+# ── Full report ──────────────────────────────────────────────────────────────
+# Runs the full pipeline (data → analysis → modeling) then renders the
+# three Quarto reports and copies them to /output/ so they survive past
+# the container lifetime when /output/ is bind-mounted by the caller.
+report:
+	$(RUNPY) -m etf_predictor.data.pipeline
+	$(RUNPY) scripts/run_analysis.py
+	$(RUNPY) scripts/run_modeling.py
+	quarto render reports/eda_report.qmd
+	quarto render reports/statistical_analysis.qmd
+	quarto render reports/modeling_report.qmd
+	@$(MAKE) --no-print-directory publish
+
+# ── Render only ──────────────────────────────────────────────────────────────
+# Re-renders the three Quarto reports from the pre-computed CSVs + figures
+# already on disk (no Yahoo download, no statistical analysis, no model
+# training). Use this for fast class demos when the image already ships
+# the data/ and reports/results/ artefacts. Total runtime: ~30 s.
+render:
+	quarto render reports/eda_report.qmd
+	quarto render reports/statistical_analysis.qmd
+	quarto render reports/modeling_report.qmd
+	@$(MAKE) --no-print-directory publish
+
+# ── Publish rendered HTMLs to /output ────────────────────────────────────────
+# Copies the three self-contained HTML files to /output/, which the caller
+# is expected to bind-mount (`docker run -v $PWD/output:/output ...`).
+# Safe to call when /output is not mounted — it just lands inside the
+# container's filesystem and is discarded when the container exits.
+publish:
+	@mkdir -p /output
+	@cp reports/eda_report.html              /output/ 2>/dev/null || true
+	@cp reports/statistical_analysis.html    /output/ 2>/dev/null || true
+	@cp reports/modeling_report.html         /output/ 2>/dev/null || true
+	@echo "Published HTML reports to /output/"
+	@ls -lh /output/*.html 2>/dev/null || true

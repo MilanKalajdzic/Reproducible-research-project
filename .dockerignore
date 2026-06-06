@@ -18,9 +18,11 @@ build/
 venv
 env
 
-# Data — downloaded at runtime, not baked into image
-data/raw/
-data/processed/
+# Data — parquet cache IS baked into the image so the EDA report's
+# loader.load() call hits the cache instead of Yahoo Finance. To force
+# a fresh download instead, uncomment the two lines below.
+# data/raw/
+# data/processed/
 
 # Jupyter checkpoints
 .ipynb_checkpoints/
@@ -42,3 +44,10 @@ docs/_build/
 .pytest_cache/
 .coverage
 htmlcov/
+
+
+# Rendered Quarto output 
+reports/*.html
+reports/eda_report_files/
+reports/statistical_analysis_files/
+reports/modeling_report_files/

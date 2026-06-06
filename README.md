@@ -7,33 +7,78 @@ adapted for three European ETFs: **IEUR**, **FEZ**, and **EUFN**, with
 
 ---
 
-## Quick Start (Docker — recommended)
+## Quick Start
 
-    # 1. Pull the image from DockerHub
-    docker pull ##!!!!!TBD!!!!!
+### Step 1 — pull the image
 
-    # 2. Or build locally
+    docker pull milankalajdzic/etf-predictor:latest
+
+> **Macs:** if the pull fails with add
+> `--platform linux/amd64` to both the `pull` and `run` commands.
+> Docker Desktop will emulate linux envi.
+
+### Step 2 — create an empty folder for the rendered reports
+
+The container publishes the three HTML files to `/output/` inside
+itself.
+
+    mkdir output         
+
+### Step 3 — run the full pipeline
+
+The default `CMD` is `make report`, which runs the **entire pipeline
+from scratch**: download/process data → statistical analysis → MLP
+and LSTM walk-forward training → render all three Quarto reports
+→ copy them to `/output/`.
+
+    # macOS / Linux / WSL
+    docker run --rm \
+        -v "$PWD/output:/output" \
+        milankalajdzic/etf-predictor:latest
+
+    # Windows PowerShell
+    docker run --rm `
+        -v "${PWD}/output:/output" `
+        milankalajdzic/etf-predictor:latest
+
+Expect **~10 minutes** of runtime — 4 tickers × ~22 folds × MLP + LSTM,
+all on CPU. 
+
+### Step 4 — open the reports
+
+    open ./output/*.html
+
+When the container exits, three self-contained HTML files appear in
+your `output/` folder:
+
+- `output/eda_report.html` — data preparation & feature engineering
+- `output/statistical_analysis.html` — variance / correlation / RF / ARIMA
+- `output/modeling_report.html` — MLP + LSTM walk-forward backtest
+
+---
+
+## Power-user options
+
+### Build locally instead of pulling
+
     docker compose build
+    docker compose run --rm \
+        -v "$PWD/output:/output" \
+        etf-predictor
 
-    # 3. Open a shell inside the container
+### Open a shell inside the container
+
     docker compose run --rm etf-predictor bash
 
-    # 4. Inside the container — run everything in order:
+    # then, inside the container:
     make data       # download and process ETF data
     make test       # run 34 unit tests
-    make eda        # generate EDA figures to reports/figures/
-    make analysis   # run statistical analysis
-    make docs       # build Sphinx HTML docs to docs/_build/html/
-
-    # 5. Render the Quarto report (inside container)
-    quarto render reports/eda_report.qmd
-    quarto render reports/statistical_analysis.qmd
-
-    # 6. Copy rendered report out to your local machine (from PowerShell)
-    docker cp <container_name>:/app/reports/eda_report.html reports/eda_report.html
-
-    # 7. Copy built docs out to your local machine (from PowerShell)
-    docker cp <container_name>:/app/docs/_build/html docs/_build/html
+    make eda        # regenerate EDA figures only
+    make analysis   # statistical analysis only
+    make modeling   # MLP + LSTM walk-forward only
+    make report     # full pipeline + render all three reports + publish to /output
+    make render     # *just* re-render Quarto reports from existing CSVs (fast)
+    make publish    # copy reports/*.html → /output
 
 ---
 
@@ -167,22 +212,36 @@ The corresponding Quarto report can be rendered with:
 | `make docker-run` | Run pipeline in Docker |
 | `make docker-test` | Run tests in Docker |
 | `make analysis` | Run statistical analysis pipeline |
+| `make modeling` | Train MLP + LSTM with walk-forward validation and equity plots |
 ---
 
-## Rendering the Report
+## Rendering the Reports
 
-The Quarto report must be rendered inside the Docker container where all
-dependencies are available:
+Three Quarto reports live under `reports/`:
 
-    # inside the container
+| Report | Source | Description |
+|--------|--------|-------------|
+| EDA | `reports/eda_report.qmd` | Data preparation, indicator construction, class balance |
+| Statistical analysis | `reports/statistical_analysis.qmd` | Variance / correlation / ADF / Random Forest importance / ARIMA |
+| Modeling | `reports/modeling_report.qmd` | MLP + LSTM walk-forward backtest, equity curves, top-10 feature ablation |
+
+Render them all in one go (inside the container):
+
+    make report
+
+or one at a time:
+
     quarto render reports/eda_report.qmd
     quarto render reports/statistical_analysis.qmd
+    quarto render reports/modeling_report.qmd
 
-    # copy the HTML output to your local machine (from PowerShell)
-    docker cp <container_name>:/app/reports/eda_report.html reports/eda_report.html
-    docker cp <container_name>:/app/reports/eda_report_files reports/eda_report_files
+If `reports/` is bind-mounted with `-v "$PWD/reports:/app/reports"`,
+the rendered HTML appears on the host automatically. Otherwise
+copy it out:
 
-Then open `reports/eda_report.html` or `reports/statistical_analysis.html` in your browser.
+    docker cp <container_name>:/app/reports/modeling_report.html reports/modeling_report.html
+
+
 
 ---
 
@@ -210,12 +269,7 @@ Then open docs/_build/html/index.html in your browser.
 
 ---
 
-## Requirements
 
-- Docker Desktop (no local Python installation needed)
-- All dependencies are pinned in pyproject.toml and baked into the image
-
----
 
 ## References
 

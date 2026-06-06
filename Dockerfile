@@ -20,9 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
-    && curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb \
-    && dpkg -i quarto-linux-amd64.deb \
-    && rm quarto-linux-amd64.deb \
+    && ARCH="$(dpkg --print-architecture)" \
+    && curl -LO "https://quarto.org/download/latest/quarto-linux-${ARCH}.deb" \
+    && dpkg -i "quarto-linux-${ARCH}.deb" \
+    && rm "quarto-linux-${ARCH}.deb" \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install jupyter
@@ -35,33 +36,46 @@ FROM base AS deps
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
+# Install CPU-only torch first from the PyTorch CPU wheel index so the
+# image stays small (no CUDA libs). The .[dev,notebook] install below
+# then sees torch already satisfied and skips the GPU wheel.
+RUN pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.2"
+
 RUN pip install ".[dev,notebook]"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 3: final image
 # ─────────────────────────────────────────────────────────────────────────────
 FROM deps AS final
 
-# Copy source code
+# Source and config
 COPY src/ ./src/
 COPY tests/ ./tests/
 COPY notebooks/ ./notebooks/
-COPY reports/ ./reports/
 COPY scripts/ ./scripts/
 COPY docs/ ./docs/
 COPY Makefile ./
 COPY .pre-commit-config.yaml ./
 
-# Create data directories that will be populated at runtime
-# (raw data is downloaded, not baked into the image)
-RUN mkdir -p data/raw data/processed reports/figures
+# Reports — qmd sources + pre-computed CSVs and figures (no .html)
+COPY reports/ ./reports/
 
-# Default command: run the full pipeline then drop into bash
-CMD ["python", "-m", "etf_predictor.data.pipeline"]
+# Pre-baked pipeline artifacts so `make report` only re-renders Quarto
+COPY data/ ./data/
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Labels
-# ─────────────────────────────────────────────────────────────────────────────
 LABEL maintainer="ETF Predictor Team" \
-      description="ETF trend prediction — data preparation" \
-      version="0.1.0"
+      description="ETF trend prediction —  render-only demo" \
+      version="1.0.0" \
+      org.opencontainers.image.source="https://github.com/<your-handle>/etf-predictor"
+
+# /output/ is where the published HTML reports land. Bind-mount this
+# directory (`docker run -v $PWD/output:/output ...`) to retrieve the
+# rendered reports on the host.
+RUN mkdir -p /output
+
+# Default command: run the full pipeline end-to-end — download/process
+# data, statistical analysis, MLP + LSTM walk-forward training, render
+# all three Quarto reports, and publish them to /output/. Takes
+# ~10 minutes on CPU.
+CMD ["make", "report"]

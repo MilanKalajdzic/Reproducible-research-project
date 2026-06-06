@@ -20,6 +20,7 @@ dependencies = [
     "statsmodels>=0.14",
     "pyarrow>=14.0",       # parquet support
     "fastparquet>=2023.0", # parquet alternative
+    "torch>=2.2",          # MLP + LSTM models (CPU-only is fine in Docker)
 ]
 
 [project.optional-dependencies]
