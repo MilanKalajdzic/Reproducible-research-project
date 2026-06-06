@@ -40,7 +40,10 @@ COVID-19 period and subsequent recovery.
 
 ```{python}
 import sys
-sys.path.insert(0, "/app/src")
+from pathlib import Path
+
+PROJECT_ROOT = Path.cwd().parent
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 import logging
 logging.basicConfig(level=logging.WARNING)
