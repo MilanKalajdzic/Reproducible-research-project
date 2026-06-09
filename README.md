@@ -141,7 +141,7 @@ This stage performs:
 
 Run it with:
 
-    make analysis
+    docker run --rm \ -v "$PWD/reports:/app/reports" \ milankalajdzic/etf-predictor:latest \ make analysis
 
 Outputs are saved to:
 
@@ -149,7 +149,7 @@ Outputs are saved to:
 
 The corresponding Quarto report can be rendered with:
 
-    quarto render reports/statistical_analysis.qmd
+    docker run --rm \ -v "$PWD/reports:/app/reports" \ milankalajdzic/etf-predictor:latest \ quarto render reports/statistical_analysis.qmd
 ---
 
 ## Project Structure
@@ -227,13 +227,13 @@ Three Quarto reports live under `reports/`:
 
 Render them all in one go (inside the container):
 
-    make report
+    docker run --rm \ -v "$PWD/output:/output" \ milankalajdzic/etf-predictor:latest
 
 or one at a time:
 
-    quarto render reports/eda_report.qmd
-    quarto render reports/statistical_analysis.qmd
-    quarto render reports/modeling_report.qmd
+    docker run --rm \ -v "$PWD/reports:/app/reports" \ milankalajdzic/etf-predictor:latest \ quarto render reports/eda_report.qmd
+    docker run --rm \ -v "$PWD/reports:/app/reports" \ milankalajdzic/etf-predictor:latest \ quarto render reports/statistical_analysis.qmd
+    docker run --rm \ -v "$PWD/reports:/app/reports" \ milankalajdzic/etf-predictor:latest \ quarto render reports/modeling_report.qmd
 
 If `reports/` is bind-mounted with `-v "$PWD/reports:/app/reports"`,
 the rendered HTML appears on the host automatically. Otherwise
